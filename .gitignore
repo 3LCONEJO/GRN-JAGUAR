@@ -1,0 +1,14 @@
+# Generated outputs and large artifacts
+2_data/
+3_output/
+*.rds
+*.h5
+*.h5ad
+*.loom
+*.bw
+
+# Notebook and editor caches
+.ipynb_checkpoints/
+*.Rhistory
+*.RData
+.Rproj.user/

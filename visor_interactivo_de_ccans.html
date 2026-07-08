@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JAGUAR - CCAN Viewer</title>
+    
+    <!-- Load Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Load Ideogram.js to draw the chromosomes -->
+    <script src="https://cdn.jsdelivr.net/npm/ideogram@1.41.0/dist/js/ideogram.min.js"></script>
+
+    <style>
+        :root {
+            color-scheme: light;
+            --brand-gradient: linear-gradient(135deg, #fb6208 0%, #d83f4d 25%, #a60db2 50%, #900ccf 75%, #3684ed 100%);
+            --rbrand-gradient: linear-gradient(135deg, #fb6208 100%, #d83f4d 75%, #a60db2 50%, #900ccf 25%, #3684ed 0%);
+
+        }
+
+        body {
+            background-attachment: fixed;
+            background-size: cover;
+        }
+
+        .bg-slate-5 {
+            background-color: var(--rbrand-gradient);
+        }
+
+        /* Custom styles for the ideogram container */
+        #ideo-container {
+            width: 100%;
+            overflow: auto;
+            background-color: white;
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            min-height: 520px;
+        }
+
+        #pdf-frame {
+            width: 100%;
+            height: 100%;
+            border: 0;
+            background: #f8fafc;
+        }
+
+        #pdf-empty-state {
+            min-height: 260px;
+        }
+        
+        /* Tooltip de Ideo.js personalizado */
+        ._ideogramTooltip {
+            font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif !important;
+            border-radius: 0.375rem !important;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1) !important;
+            padding: 0.75rem !important;
+            border: 1px solid #e5e7eb !important;
+        }
+    </style>
+</head>
+<body class="text-slate-800 font-sans min-h-screen flex flex-col">
+
+    <!-- Header -->
+    <header class="text-white p-6 shadow-md" style="background: var(--brand-gradient);">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <div>
+                <h1 class="text-3xl font-bold tracking-tight">JAGUAR Project</h1>
+                <p class="text-white-800 mt-1">Interactive Cis-Co-accessible Network Explorer (CCANs)</p>
+            </div>
+            <div class="p-3 rounded-lg text-sm bg-slate-800">
+                <span class="font-semibold text-purple-400">Total CCANs:</span> <span id="total-count">Loading...</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-grow max-w-7xl mx-auto w-full p-6 flex flex-col gap-6">
+        
+        <!-- Instructions / Controls Panel -->
+        <div class="bg-white p-5 rounded-lg shadow-sm border border-slate-200 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div>
+                <h2 class="text-lg font-semibold text-purple-800 mb-1">Complete Genomic Map</h2>
+                <p class="text-sm text-slate-500">Click a red marker to load the CCAN PDF in the side panel. The filter lets you isolate specific chromosomes.</p>
+            </div>
+            <div class="flex items-center gap-2">
+                <label for="chr-filter" class="text-sm font-medium text-purple-800">Filter Chromosome:</label>
+                <select id="chr-filter" class="bg-slate-50 border border-slate-300 text-slate-900 text-sm rounded-lg focus:ring-purple-500 focus:border-purple-500 block p-2.5">
+                    <option value="all">View All</option>
+                    <!-- Options will be filled by JS -->
+                </select>
+            </div>
+        </div>
+
+        <section class="grid grid-cols-1 xl:grid-cols-[1.6fr_1fr] gap-6 items-start">
+            <div class="space-y-4">
+                <div class="bg-white p-4 rounded-lg shadow-sm border border-slate-200">
+                    <div class="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                            <h2 class="text-lg font-semibold text-purple-800">CCAN Map</h2>
+                        </div>
+                        <div class="text-xs text-slate-400">
+                            Click a marker to change the document
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Container where Ideogram.js will render -->
+                <div id="ideo-container"></div>
+            </div>
+
+            <aside class="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden sticky top-6">
+                <div class="border-b border-slate-200 p-4 bg-slate-50 flex items-start justify-between gap-4">
+                    <div>
+                        <h3 class="text-base font-semibold text-purple-800">CCAN PDF</h3>
+                        <p id="pdf-title" class="text-sm text-slate-500">Select a marker to load the plot.</p>
+                    </div>
+                    <a id="pdf-open-link" href="#" target="_blank" rel="noopener noreferrer" class="text-sm font-medium text-purple-600 hover:text-orange-700 hidden sm:inline">
+                        Open
+                    </a>
+                </div>
+                <div id="pdf-empty-state" class="p-4 flex items-center justify-center text-sm text-slate-400">
+                    The PDF viewer will appear here.
+                    Ojala, quien sabe, a lo mejor no cargo bien.
+                </div>
+                <div class="h-[34rem]">
+                    <iframe id="pdf-frame" title="CCAN PDF Viewer" loading="lazy"></iframe>
+                </div>
+
+                <!-- Selected CCAN information panel -->
+                <div id="ccan-info" class="border-t border-slate-200 p-4 bg-slate-50">
+                    <h4 class="text-purple-800 font-semibold mb-3 ">CCAN Information</h4>
+                    <dl class="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+                        <div>
+                            <dt class="text-xs uppercase tracking-wide text-slate-400">CCAN</dt>
+                            <dd id="info-ccan" class="font-medium text-slate-800">—</dd>
+                        </div>
+                        <div>
+                            <dt class="text-xs uppercase tracking-wide text-slate-400">Chromosome</dt>
+                            <dd id="info-chr" class="font-medium text-slate-800">—</dd>
+                        </div>
+                        <div>
+                            <dt class="text-xs uppercase tracking-wide text-slate-400">Start (bp)</dt>
+                            <dd id="info-start" class="font-medium text-slate-800">—</dd>
+                        </div>
+                        <div>
+                            <dt class="text-xs uppercase tracking-wide text-slate-400">End (bp)</dt>
+                            <dd id="info-end" class="font-medium text-slate-800">—</dd>
+                        </div>
+                        <div>
+                            <dt class="text-xs uppercase tracking-wide text-slate-400">Size</dt>
+                            <dd id="info-size" class="font-medium text-slate-800">—</dd>
+                        </div>
+                        <div>
+                            <dt class="text-xs uppercase tracking-wide text-slate-400">No. of peaks</dt>
+                            <dd id="info-peaks" class="font-medium text-slate-800">—</dd>
+                        </div>
+                    </dl>
+                </div>
+            </aside>
+        </section>
+        
+    </main>
+
+    <!-- Footer -->
+    <footer class="text-white text-center p-4 text-sm mt-auto" style="background: var(--brand-gradient);">
+        Automatically generated from R data. CCAN track plots.
+    </footer>
+
+    <!-- Application logic -->
+    <script>
+        // ---------------------------------------------------------
+        // 1. MOCK DATA
+        // ---------------------------------------------------------
+        const mockData = [
+            { ccan: 1, chromosome: "chr1", start: 100132256, end: 100400828, n_peaks: 4, size_kb: 268.572, pdf_url: "4_figures/chr1/CCAN_1_track_plot.pdf" },
+            { ccan: 2, chromosome: "chr1", start: 629139, end: 2927743, n_peaks: 96, size_kb: 2298.604, pdf_url: "4_figures/chr1/CCAN_2_track_plot.pdf" },
+            { ccan: 3, chromosome: "chr1", start: 7549163, end: 10485070, n_peaks: 129, size_kb: 2935.907, pdf_url: "4_figures/chr1/CCAN_3_track_plot.pdf" },
+            { ccan: 5, chromosome: "chr1", start: 100522609, end: 100540179, n_peaks: 5, size_kb: 17.570, pdf_url: "4_figures/chr1/CCAN_5_track_plot.pdf" },
+            // Added one synthetic example on chr12 to show variety
+            { ccan: 1025, chromosome: "chr12", start: 113040427, end: 113041384, n_peaks: 25, size_kb: 0.95, pdf_url: "4_figures/chr12/CCAN_1025_track_plot.pdf" }
+        ];
+
+        // Global variable to store the Ideogram instance
+        let ideogram;
+        let selectedPdfUrl = '';
+
+        function formatBp(value) {
+            return typeof value === 'number' ? value.toLocaleString() : '—';
+        }
+
+        function formatSizeKb(value) {
+            if (typeof value !== 'number') return '—';
+            return value >= 1000
+                ? `${(value / 1000).toLocaleString(undefined, { maximumFractionDigits: 2 })} Mb`
+                : `${value.toLocaleString(undefined, { maximumFractionDigits: 2 })} kb`;
+        }
+
+        function updatePdfViewer(annot) {
+            const frame = document.getElementById('pdf-frame');
+            const title = document.getElementById('pdf-title');
+            const emptyState = document.getElementById('pdf-empty-state');
+            const openLink = document.getElementById('pdf-open-link');
+            // Compatibility with different field names
+            const url = annot.url || annot.pdf_url || annot.pdf || annot.href || '';
+            selectedPdfUrl = url;
+            frame.src = url;
+            title.textContent = `${annot.name || 'CCAN'} · chr${annot.chr || ''}`;
+            emptyState.style.display = 'none';
+            openLink.href = url;
+            openLink.classList.remove('hidden');
+
+            // Fill the CCAN information panel
+            document.getElementById('info-ccan').textContent = annot.name || '—';
+            document.getElementById('info-chr').textContent = annot.chr ? `chr${annot.chr}` : '—';
+            document.getElementById('info-start').textContent = formatBp(annot.start);
+            document.getElementById('info-end').textContent = formatBp(annot.stop);
+            document.getElementById('info-size').textContent = formatSizeKb(annot.size);
+            document.getElementById('info-peaks').textContent = typeof annot.peaks === 'number' ? annot.peaks.toLocaleString() : '—';
+        }
+
+        function getDefaultAnnotation(annotations) {
+            return annotations[0];
+        }
+
+        function bindAnnotationMarkerClicks(annotationsToUse) {
+            window.requestAnimationFrame(() => {
+                const markers = document.querySelectorAll('#ideo-container .annot');
+
+                markers.forEach((marker, index) => {
+                    marker.style.cursor = 'pointer';
+                    marker.onclick = () => {
+                        const annot = annotationsToUse[index];
+                        if (annot) {
+                            updatePdfViewer(annot);
+                        }
+                    };
+                });
+            });
+        }
+
+        // ---------------------------------------------------------
+        // 2. MAIN FUNCTION
+        // ---------------------------------------------------------
+        async function initApp() {
+            let rawData = [];
+            
+            try {
+                // TRY TO LOAD YOUR REAL JSON:
+                // If this HTML is in the same folder as ccan_index.json, it will read it.
+                const response = await fetch('ccan_index.json');
+                if (!response.ok) throw new Error("Local JSON not found");
+                rawData = await response.json();
+                console.log("Data loaded from ccan_index.json");
+            } catch (error) {
+                // IF IT FAILS (e.g. opening the HTML directly without a web server), USE THE MOCK DATA
+                console.warn("Could not load ccan_index.json (you probably need a local server). Using mock data.");
+                rawData = mockData;
+            }
+
+            // Update counter
+            document.getElementById('total-count').textContent = rawData.length;
+
+            // Transform your data into the format required by Ideogram.js
+            const annotations = rawData.map(item => {
+                return {
+                    name: `CCAN ${item.ccan}`,
+                    // Ideogram.js expects "1", not "chr1", so we remove the "chr" prefix
+                    chr: item.chromosome.replace("chr", ""),
+                    start: item.start,
+                    stop: item.end,
+                    // Extra fields used on click or in the tooltip
+                    url: item.pdf_url,
+                    peaks: item.n_peaks,
+                    size: item.size_kb,
+                    color: "#e11d48", // Tailwind Rose-600
+                    shape: "triangle" 
+                };
+            });
+
+            // Populate the chromosome filter
+            populateChromosomeFilter(annotations);
+
+            // Draw the initial ideogram
+            renderIdeogram(annotations);
+
+            updatePdfViewer(getDefaultAnnotation(annotations));
+
+            // Add the filter event handler
+            document.getElementById('chr-filter').addEventListener('change', (e) => {
+                const selectedChr = e.target.value;
+                if (selectedChr === 'all') {
+                    renderIdeogram(annotations); // Show all
+                } else {
+                    renderIdeogram(annotations, selectedChr); // Show one specific chromosome
+                }
+
+                const visibleAnnotation = selectedChr === 'all'
+                    ? getDefaultAnnotation(annotations)
+                    : annotations.find(item => item.chr === selectedChr);
+
+                if (visibleAnnotation) {
+                    updatePdfViewer(visibleAnnotation);
+                }
+            });
+        }
+
+        // ---------------------------------------------------------
+        // 3. RENDERING FUNCTIONS (IDEOGRAM.JS)
+        // ---------------------------------------------------------
+        function renderIdeogram(annotations, singleChr = null) {
+            const container = document.getElementById('ideo-container');
+                
+            // 1. Capture the width BEFORE clearing the container to avoid measuring 0
+            let safeWidth = container.clientWidth;
+                
+            // Clear the previous container contents
+            container.innerHTML = '';
+                
+            const annotationsToUse = singleChr
+                ? annotations.filter(item => item.chr === singleChr)
+                : annotations;
+
+            // If we are showing a single chromosome, render a linear SVG map
+            // with clickable regions. This avoids Ideogram rasterization issues
+            // in single-chromosome views and ensures clicks open the PDF.
+            if (singleChr) {
+                // If there are no annotations, show a message
+                if (!annotationsToUse || annotationsToUse.length === 0) {
+                    container.innerHTML = '<div class="p-6 text-sm text-slate-500">There are no CCANs for this chromosome.</div>';
+                    return;
+                }
+
+                const width = 240;
+                const height = Math.max(container.clientHeight - 40, 700);
+                const svgNS = 'http://www.w3.org/2000/svg';
+                const svg = document.createElementNS(svgNS, 'svg');
+                svg.setAttribute('width', width);
+                svg.setAttribute('height', height);
+                svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+                // Allow labels and the popover to render outside the base area if needed
+                svg.style.overflow = 'visible';
+
+                // Sort by genomic position so the grouping algorithm
+                // processes annotations in their real top-to-bottom order.
+                const sortedAnnotations = [...annotationsToUse].sort((a, b) => a.start - b.start);
+
+                // Compute the genome span from annotations to scale positions
+                const minStart = Math.min(...sortedAnnotations.map(a => a.start));
+                const maxEnd = Math.max(...sortedAnnotations.map(a => a.stop));
+                const span = Math.max(1, maxEnd - minStart);
+
+                // Draw the vertical chromosome backbone
+                const backboneX = Math.round(width / 2 - 60);
+                const backboneWidth = 36;
+                const backbone = document.createElementNS(svgNS, 'rect');
+                backbone.setAttribute('x', backboneX.toString());
+                backbone.setAttribute('y', 20);
+                backbone.setAttribute('width', backboneWidth.toString());
+                backbone.setAttribute('height', (height - 40).toString());
+                backbone.setAttribute('fill', '#f1f5f9');
+                backbone.setAttribute('rx', 8);
+                svg.appendChild(backbone);
+
+                // Prepare defs for the arrow marker
+                const defs = document.createElementNS(svgNS, 'defs');
+                const marker = document.createElementNS(svgNS, 'marker');
+                marker.setAttribute('id', 'arrow');
+                marker.setAttribute('markerWidth', '8');
+                marker.setAttribute('markerHeight', '8');
+                marker.setAttribute('refX', '0');
+                marker.setAttribute('refY', '3');
+                marker.setAttribute('orient', 'auto');
+                const markerPath = document.createElementNS(svgNS, 'path');
+                markerPath.setAttribute('d', 'M0,0 L0,6 L6,3 z');
+                markerPath.setAttribute('fill', '#0f172a');
+                marker.appendChild(markerPath);
+                defs.appendChild(marker);
+                svg.appendChild(defs);
+
+                // Popover state (expandable list) for CCAN clusters
+                let openPopover = null;
+                function closePopover() {
+                    if (openPopover) {
+                        openPopover.remove();
+                        openPopover = null;
+                    }
+                }
+                // Close the popover if the user clicks an empty area of the SVG
+                svg.addEventListener('click', (e) => {
+                    if (e.target === svg || e.target === backbone) closePopover();
+                });
+
+                // Calculate pixel positions (y, height, center) for each CCAN from its real genomic position
+                const items = sortedAnnotations.map(a => {
+                    const y = 20 + ((a.start - minStart) / span) * (height - 40);
+                    const h = Math.max(8, ((a.stop - a.start) / span) * (height - 40));
+                    return { a, y, h, centerY: y + h / 2 };
+                });
+
+                // Always draw the rectangles at their real genomic positions (this does not change,
+                // only the grouping of the text labels drawn below).
+                items.forEach(item => {
+                    const rect = document.createElementNS(svgNS, 'rect');
+                    rect.setAttribute('x', (backboneX - 8).toString());
+                    rect.setAttribute('y', item.y.toString());
+                    rect.setAttribute('width', (backboneWidth + 16).toString());
+                    rect.setAttribute('height', item.h.toString());
+                    rect.setAttribute('fill', item.a.color || '#e11d48');
+                    rect.setAttribute('opacity', '0.95');
+                    rect.setAttribute('stroke', '#7f1d1d');
+                    rect.setAttribute('stroke-width', '0.5');
+                    rect.style.cursor = 'pointer';
+
+                    rect.addEventListener('mouseenter', () => rect.setAttribute('fill', '#fb7185'));
+                    rect.addEventListener('mouseleave', () => rect.setAttribute('fill', item.a.color || '#e11d48'));
+                    rect.addEventListener('click', () => {
+                        closePopover();
+                        updatePdfViewer(item.a);
+                    });
+
+                    const title = document.createElementNS(svgNS, 'title');
+                    title.textContent = `${item.a.name} (${formatBp(item.a.start)} - ${formatBp(item.a.stop)})`;
+                    rect.appendChild(title);
+
+                    item.rect = rect;
+                    svg.appendChild(rect);
+                });
+
+                // --- Group labels into clusters when they would otherwise be too close ---
+                // The grouping decision is now based on real genomic distance (Mb),
+                // not pixels: two CCANs are merged into one cluster only if the distance
+                // between the end of one and the start of the next is below this threshold.
+                // This avoids visually dense regions grouping items that are actually
+                // far apart in the genome, and vice versa.
+                const minGapMb = 3; // Adjust this value (in megabases) to change the threshold
+                const minGapBp = minGapMb * 1_000_000;
+
+                const clusters = [];
+                items.forEach(item => {
+                    const last = clusters[clusters.length - 1];
+                    if (last) {
+                        const lastMember = last.members[last.members.length - 1];
+                        const gapBp = item.a.start - lastMember.a.stop;
+                        if (gapBp < minGapBp) {
+                            last.members.push(item);
+                            last.spanTop = Math.min(last.spanTop, item.y);
+                            last.spanBottom = Math.max(last.spanBottom, item.y + item.h);
+                            return;
+                        }
+                    }
+                    clusters.push({
+                        members: [item],
+                        spanTop: item.y,
+                        spanBottom: item.y + item.h
+                    });
+                });
+
+                // Final position of each label = average of the centers of its members.
+                clusters.forEach(c => {
+                    c.labelY = c.members.reduce((s, m) => s + m.centerY, 0) / c.members.length;
+                });
+
+                // Safety pass, in pixels only: if two labels from DIFFERENT clusters
+                // (already decided by Mb) still end up visually too close, separate them a bit.
+                // This does not change what gets grouped, only the final drawing.
+                const minLabelPixelGap = 16;
+                for (let i = 1; i < clusters.length; i++) {
+                    if (clusters[i].labelY - clusters[i - 1].labelY < minLabelPixelGap) {
+                        clusters[i].labelY = clusters[i - 1].labelY + minLabelPixelGap;
+                    }
+                }
+
+                // If labels still need more vertical space than the backbone,
+                // enlarge the SVG canvas (the container already scrolls) without distorting
+                // the genomic scale of the rectangles.
+                const neededHeight = clusters.length ? clusters[clusters.length - 1].labelY + 40 : height;
+                const svgHeight = Math.max(height, neededHeight);
+                if (svgHeight > height) {
+                    svg.setAttribute('height', svgHeight.toString());
+                    svg.setAttribute('viewBox', `0 0 ${width} ${svgHeight}`);
+                }
+
+                const labelBaseX = backboneX + backboneWidth + 12;
+
+                clusters.forEach(cluster => {
+                    const count = cluster.members.length;
+                    const first = cluster.members[0].a;
+
+                    // Connector line from the midpoint of the cluster's genomic span to the label
+                    const midSpanY = (cluster.spanTop + cluster.spanBottom) / 2;
+                    const line = document.createElementNS(svgNS, 'line');
+                    line.setAttribute('x1', (backboneX + backboneWidth).toString());
+                    line.setAttribute('y1', midSpanY.toString());
+                    line.setAttribute('x2', (labelBaseX - 6).toString());
+                    line.setAttribute('y2', cluster.labelY.toString());
+                    line.setAttribute('stroke', '#0f172a');
+                    line.setAttribute('stroke-width', '1');
+                    line.setAttribute('marker-end', 'url(#arrow)');
+                    svg.appendChild(line);
+
+                    // Label text: simple name if it is a single CCAN,
+                    // or "CCAN X +N more" if it represents a cluster
+                    const label = document.createElementNS(svgNS, 'text');
+                    label.setAttribute('x', labelBaseX.toString());
+                    label.setAttribute('y', cluster.labelY.toString());
+                    label.setAttribute('text-anchor', 'start');
+                    label.setAttribute('font-size', '12');
+                    label.setAttribute('font-weight', count > 1 ? '600' : '400');
+                    label.setAttribute('fill', count > 1 ? '#9f1239' : '#0f172a');
+                    label.style.cursor = 'pointer';
+                    label.textContent = count > 1 ? `${first.name} +${count - 1} more` : first.name;
+
+                    const highlightMembers = (on) => {
+                        cluster.members.forEach(m => m.rect.setAttribute('fill', on ? '#fb7185' : (m.a.color || '#e11d48')));
+                        line.setAttribute('stroke', on ? '#b91c1c' : '#0f172a');
+                    };
+                    label.addEventListener('mouseenter', () => highlightMembers(true));
+                    label.addEventListener('mouseleave', () => highlightMembers(false));
+
+                    if (count === 1) {
+                        // Single CCAN: click opens its PDF directly, as before
+                        label.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            closePopover();
+                            updatePdfViewer(first);
+                        });
+                    } else {
+                        // Multiple grouped CCANs: click toggles a dropdown list
+                        label.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            const clusterKey = String(cluster.labelY);
+                            if (openPopover && openPopover.dataset.cluster === clusterKey) {
+                                closePopover();
+                                return;
+                            }
+                            closePopover();
+
+                            const popW = 190;
+                            const rowH = 22;
+                            const popH = Math.min(count, 8) * rowH + 12;
+                            const popX = labelBaseX + 14;
+                            let popY = cluster.labelY - popH / 2;
+                            if (popY < 4) popY = 4;
+                            if (popY + popH > svgHeight - 4) popY = svgHeight - 4 - popH;
+
+                            const fo = document.createElementNS(svgNS, 'foreignObject');
+                            fo.setAttribute('x', popX.toString());
+                            fo.setAttribute('y', popY.toString());
+                            fo.setAttribute('width', popW.toString());
+                            fo.setAttribute('height', popH.toString());
+                            fo.dataset.cluster = clusterKey;
+
+                            const wrapper = document.createElement('div');
+                            wrapper.setAttribute('xmlns', 'http://www.w3.org/1999/xhtml');
+                            wrapper.className = 'bg-white border border-slate-300 rounded-md shadow-lg text-xs overflow-y-auto';
+                            wrapper.style.width = popW + 'px';
+                            wrapper.style.height = popH + 'px';
+
+                            cluster.members.forEach(m => {
+                                const row = document.createElement('button');
+                                row.type = 'button';
+                                row.className = 'block w-full text-left px-2 py-1 hover:bg-rose-50 border-b border-slate-100 text-slate-700';
+                                row.textContent = `${m.a.name} \u00b7 ${formatBp(m.a.start)}-${formatBp(m.a.stop)}`;
+                                row.addEventListener('click', (ev) => {
+                                    ev.stopPropagation();
+                                    closePopover();
+                                    updatePdfViewer(m.a);
+                                });
+                                wrapper.appendChild(row);
+                            });
+
+                            fo.appendChild(wrapper);
+                            svg.appendChild(fo);
+                            openPopover = fo;
+                        });
+                    }
+
+                    svg.appendChild(label);
+                });
+
+                container.appendChild(svg);
+                return;
+            }
+
+            // By default, use Ideogram for the full multi-chromosome view
+            const config = {
+                organism: 'human',
+                container: '#ideo-container',
+                dataDir: 'https://cdn.jsdelivr.net/npm/ideogram@1.41.0/dist/data/bands/native/',
+                // Force vertical orientation for a consistent appearance
+                orientation: 'vertical',
+                chrHeight: 420,
+                chrWidth: 20,
+                // Increase the margin to give chromosomes more spacing
+                chrMargin: 80,
+                showBandLabels: false,
+                showFullyBanded: false,
+                annotationsLayout: 'overlay',
+                showAnnotTooltip: false,
+                annotations: annotationsToUse,
+                onClickAnnot: function(annot) {
+                    // Debug: inspect the object returned by Ideogram on click
+                    console.log('Ideogram onClickAnnot:', annot);
+                    updatePdfViewer(annot);
+                },
+            };
+
+            ideogram = new Ideogram(config);
+            // Bind clicks on chromosome labels to redirect to the filter
+            setTimeout(attachChromosomeClickRedirect, 300);
+        }
+
+        function populateChromosomeFilter(annotations) {
+            const select = document.getElementById('chr-filter');
+            // Extract unique chromosomes that have CCANs
+            const uniqueChrs = [...new Set(annotations.map(a => a.chr))].sort((a, b) => {
+                // Sort numerically (1, 2... X, Y)
+                if(!isNaN(a) && !isNaN(b)) return parseInt(a) - parseInt(b);
+                return a.localeCompare(b);
+            });
+
+            uniqueChrs.forEach(chr => {
+                const option = document.createElement('option');
+                option.value = chr;
+                option.text = `Chromosome ${chr}`;
+                select.appendChild(option);
+            });
+        }
+        
+        // Add listeners to chromosome labels so they redirect to the filter
+        function attachChromosomeClickRedirect() {
+            const container = document.getElementById('ideo-container');
+            if (!container) return;
+
+            const attempt = () => {
+                // First, detect explicit elements with the 'chromosome-set' class
+                const sets = Array.from(container.querySelectorAll('.chromosome-set'));
+                if (sets.length) {
+                    sets.forEach(el => {
+                        el.style.cursor = 'pointer';
+                        el.addEventListener('click', () => {
+                            const txt = (el.textContent || '').trim();
+                            const m = txt.match(/([0-9]+|X|Y)/);
+                            if (m) {
+                                const select = document.getElementById('chr-filter');
+                                select.value = m[1];
+                                select.dispatchEvent(new Event('change'));
+                            }
+                        });
+                    });
+                    return;
+                }
+                // Look for text elements that contain only the chromosome number
+                const textNodes = Array.from(container.querySelectorAll('text, tspan'));
+                const candidates = textNodes.filter(el => {
+                    const txt = (el.textContent || '').trim();
+                    return /^([0-9]+|X|Y)$/.test(txt);
+                });
+
+                if (candidates.length === 0) {
+                    // Retry a couple of times if the content has not rendered yet
+                    setTimeout(attempt, 250);
+                    return;
+                }
+
+                candidates.forEach(el => {
+                    const chr = (el.textContent || '').trim();
+                    el.style.cursor = 'pointer';
+                    el.addEventListener('click', (e) => {
+                        const select = document.getElementById('chr-filter');
+                        if (!select) return;
+                        select.value = chr;
+                        select.dispatchEvent(new Event('change'));
+                    });
+                });
+            };
+
+            attempt();
+        }
+
+        // Start the app immediately; the script lives at the end of the body.
+        initApp();
+
+    </script>
+</body>
+</html>
