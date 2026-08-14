@@ -1,688 +1,505 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JAGUAR - CCAN Viewer</title>
-    
-    <!-- Load Tailwind CSS for styling -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Load Ideogram.js to draw the chromosomes -->
-    <script src="https://cdn.jsdelivr.net/npm/ideogram@1.41.0/dist/js/ideogram.min.js"></script>
-
-    <style>
-        :root {
-            color-scheme: light;
-            --brand-gradient: linear-gradient(135deg, #fb6208 0%, #d83f4d 25%, #a60db2 50%, #900ccf 75%, #3684ed 100%);
-            --rbrand-gradient: linear-gradient(135deg, #fb6208 100%, #d83f4d 75%, #a60db2 50%, #900ccf 25%, #3684ed 0%);
-
-        }
-
-        body {
-            background-attachment: fixed;
-            background-size: cover;
-        }
-
-        .bg-slate-5 {
-            background-color: var(--rbrand-gradient);
-        }
-
-        /* Custom styles for the ideogram container */
-        #ideo-container {
-            width: 100%;
-            overflow: auto;
-            background-color: white;
-            padding: 0.75rem;
-            border-radius: 0.5rem;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-            min-height: 520px;
-        }
-
-        #pdf-frame {
-            width: 100%;
-            height: 100%;
-            border: 0;
-            background: #f8fafc;
-        }
-
-        #pdf-empty-state {
-            min-height: 260px;
-        }
-        
-        /* Tooltip de Ideo.js personalizado */
-        ._ideogramTooltip {
-            font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif !important;
-            border-radius: 0.375rem !important;
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1) !important;
-            padding: 0.75rem !important;
-            border: 1px solid #e5e7eb !important;
-        }
-    </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>JAGUAR · CCAN Explorer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root,body{--bg:#faf9f7;--panel:#fff;--panel2:#fbfaf8;--panelGlass:rgba(255,255,255,.92);--border:#e9e5e0;--border2:#e0dbd4;--track:#f0ede8;--chipBg:#f4f1ed;--hoverbg:#f7f5f2;--text:#1c1917;--text2:#44403c;--sub:#78716c;--sub2:#57534e;--faint:#a8a29e;--accent:#900ccf;--accentBg:#f6edfc;--accentBorder:#ecd9f8;--lblL:0.44;--inputBg:#faf9f7;--thumb:#ddd8d2}
+body.dark{--bg:#17151a;--panel:#211e26;--panel2:#26222e;--panelGlass:rgba(33,30,38,.92);--border:#36303f;--border2:#443d52;--track:#2e2a38;--chipBg:#2e2a38;--hoverbg:#2b2735;--text:#f0edf4;--text2:#d9d4e3;--sub:#a49db3;--sub2:#b8b1c6;--faint:#7c7590;--accent:#c77dff;--accentBg:#3a2350;--accentBorder:#57337a;--lblL:0.78;--inputBg:#1c1922;--thumb:#443d52}
+body{margin:0;background:var(--bg);font-family:'Instrument Sans',system-ui,sans-serif;color:var(--text);overflow:hidden}
+a{color:var(--accent);text-decoration:none}a:hover{color:#d83f4d}
+button{font:inherit;cursor:pointer}
+@keyframes cardIn{from{opacity:0;transform:translateY(12px) scale(.98)}to{opacity:1;transform:none}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+::-webkit-scrollbar{width:8px;height:8px}::-webkit-scrollbar-thumb{background:var(--thumb);border-radius:4px}
+input::placeholder{color:var(--faint)}
+.app{height:100vh;display:grid;grid-template-rows:60px 1fr;grid-template-columns:250px 1fr;transition:grid-template-columns .35s cubic-bezier(.22,1,.36,1);overflow:hidden}
+.app.closed{grid-template-columns:0px 1fr}
+header{grid-column:1/-1;display:flex;align-items:center;gap:16px;padding:0 20px;background:var(--panel);border-bottom:1px solid var(--border);position:relative;z-index:30}
+.iconbtn{border:1px solid var(--border2);background:var(--panel);color:var(--sub);border-radius:8px;width:30px;height:30px;display:flex;align-items:center;justify-content:center;flex:none;padding:0;font-size:14px;line-height:1}
+.iconbtn:hover{border-color:var(--accentBorder);color:var(--accent)}
+.logo{font-size:19px;font-weight:700;letter-spacing:-.02em;background:linear-gradient(135deg,#fb6208 0%,#d83f4d 25%,#a60db2 50%,#900ccf 75%,#3684ed 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+.seg{display:flex;background:var(--chipBg);border-radius:9px;padding:2px;gap:2px;flex:none}
+.seg button{padding:5px 12px;border:none;font-size:12px;border-radius:7px;background:none;color:var(--sub)}
+.seg button.on{background:var(--panel);font-weight:600;color:var(--accent);box-shadow:0 1px 3px rgba(28,25,23,.1)}
+.seg.sm button{padding:3px 9px;font-size:11px;border-radius:6px}
+.seg.sm button.on{color:var(--text)}
+.pill{display:flex;align-items:center;gap:6px;padding:5px 10px;border:1px solid var(--border2);border-radius:20px;font-size:11px;font-weight:600;flex:none;background:var(--panel);color:var(--sub)}
+.pill.on{background:#e7f6ef;border-color:#c4e8d6;color:#0a6e4f}
+.searchwrap{position:relative;flex:1;max-width:420px}
+.searchwrap input{width:100%;box-sizing:border-box;padding:8px 12px 8px 32px;border:1px solid var(--border2);border-radius:8px;font:inherit;font-size:13px;background:var(--inputBg);color:var(--text);outline:none}
+.searchwrap svg{position:absolute;left:10px;top:9px;width:14px;height:14px}
+.dd{position:absolute;top:40px;left:0;right:0;background:var(--panel);border:1px solid var(--border2);border-radius:10px;box-shadow:0 12px 32px rgba(28,25,23,.12);overflow:hidden;animation:fadeIn .15s ease}
+.dd button{display:flex;align-items:baseline;gap:8px;width:100%;text-align:left;padding:9px 12px;border:none;background:none;font-size:13px;border-bottom:1px solid var(--chipBg);color:var(--text)}
+.dd button:hover{background:var(--accentBg)}
+.dd b{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:260px}
+.dd .sub{font-size:11.5px;color:var(--faint);font-family:ui-monospace,Menlo,monospace;flex:none}
+.gochip{display:flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;color:#0a6e4f;background:#e7f6ef;border:1px solid #c4e8d6;padding:4px 6px 4px 10px;border-radius:20px;max-width:280px}
+.gochip span.t{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gochip button{border:none;background:#c4e8d6;color:#0a6e4f;width:18px;height:18px;border-radius:50%;font-size:11px;line-height:1;flex:none;padding:0}
+aside{border-right:1px solid var(--border);background:var(--panel);display:flex;flex-direction:column;overflow:hidden;min-width:0;white-space:nowrap}
+.side-title{padding:14px 16px 8px;font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--faint)}
+.side-rows{flex:1;overflow-y:auto;padding:0 8px 8px;display:flex;flex-direction:column;gap:1px}
+.row{display:flex;align-items:center;gap:9px;padding:6px 8px;border:none;border-radius:8px;background:none;color:var(--text2);width:100%}
+.row:hover{background:var(--hoverbg)}
+.row.on{background:var(--accentBg);color:var(--accent)}
+.row .dot{width:9px;height:9px;border-radius:50%;flex:none}
+.row .nm{font-size:13px;font-weight:500;width:68px;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row .bar{flex:1;height:4px;border-radius:2px;background:var(--track);overflow:hidden}
+.row .bar i{display:block;height:100%;border-radius:2px}
+.row .ct{font-size:11.5px;color:var(--faint);font-family:ui-monospace,Menlo,monospace;width:26px;text-align:right}
+.legend{border-top:1px solid var(--track);padding:12px 16px;display:flex;flex-direction:column;gap:8px}
+.legend .lt{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--faint)}
+.legend .ld{display:flex;align-items:center;gap:14px}
+.legend .ld span{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--sub)}
+.legend .ld i{border-radius:50%;background:var(--sub)}
+main{position:relative;overflow:hidden}
+main svg.map{width:100%;height:100%;display:block}
+circle.pt{transition:cx .8s cubic-bezier(.22,1,.36,1),cy .8s cubic-bezier(.22,1,.36,1),r .8s cubic-bezier(.22,1,.36,1),opacity .45s ease}
+.lbl{position:absolute;font-weight:600;text-shadow:0 0 4px var(--bg),0 0 4px var(--bg),0 0 5px var(--bg);cursor:pointer;user-select:none;z-index:5;transition:font-size .15s,color .3s}
+.chipbar{position:absolute;top:16px;left:16px;z-index:10;display:flex;align-items:center;gap:10px;animation:fadeIn .3s ease}
+.backbtn{display:flex;align-items:center;gap:6px;padding:7px 12px;border:1px solid var(--border2);border-radius:8px;background:var(--panel);font-size:12.5px;font-weight:500;color:var(--sub2);box-shadow:0 2px 6px rgba(28,25,23,.06)}
+.backbtn:hover{border-color:var(--accentBorder);color:var(--accent)}
+.mini{position:absolute;left:16px;right:16px;bottom:14px;z-index:10;background:var(--panelGlass);backdrop-filter:blur(6px);border:1px solid var(--border);border-radius:10px;padding:10px 14px 6px;animation:fadeIn .3s ease}
+.mini .mh{display:flex;justify-content:space-between;font-size:10.5px;color:var(--faint);font-family:ui-monospace,Menlo,monospace;margin-bottom:4px}
+.tip{position:fixed;background:#1c1917;color:#fff;padding:7px 10px;border-radius:8px;pointer-events:none;z-index:50;white-space:nowrap;box-shadow:0 8px 20px rgba(0,0,0,.25);transform:translate(-50%,-130%);display:none}
+.tip .t1{font-weight:600;font-size:12.5px}.tip .t2{font-size:11px;color:#c7c2bc;font-family:ui-monospace,Menlo,monospace}
+.card{position:absolute;top:16px;right:16px;z-index:20;width:430px;max-height:calc(100% - 32px);overflow-y:auto;background:var(--panel);border:1px solid var(--border);border-radius:14px;box-shadow:0 24px 60px rgba(28,25,23,.18);animation:cardIn .35s cubic-bezier(.22,1,.36,1)}
+.card .hd{padding:14px 16px 12px;display:flex;align-items:flex-start;gap:10px;border-bottom:1px solid var(--chipBg)}
+.badge{font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;color:#fff}
+.xbtn{border:none;background:var(--chipBg);color:var(--sub);width:26px;height:26px;border-radius:8px;font-size:14px;line-height:1}
+.xbtn:hover{background:var(--accentBorder);color:var(--accent)}
+.tabs{display:flex;gap:2px;padding:10px 16px 0}
+.tabs button{padding:7px 12px;border:none;background:none;font-size:12.5px;border-radius:8px 8px 0 0;color:var(--sub)}
+.tabs button.on{font-weight:600;color:var(--accent);background:var(--accentBg)}
+.kv{border-top:1px solid var(--chipBg);background:var(--panel2);padding:12px 16px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px 14px}
+.kv .k{font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);font-weight:600}
+.kv .v{font-size:12.5px;font-weight:600;margin-top:2px}.kv .vm{font-size:12px;font-family:ui-monospace,Menlo,monospace;margin-top:2px}
+.gbar{display:grid;grid-template-columns:160px 1fr 44px;gap:8px;align-items:center}
+.gbar .gt{font-size:11px;color:var(--sub2);line-height:1.25;text-align:right;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.gbar .gk{height:14px;background:var(--chipBg);border-radius:3px;overflow:hidden}
+.gbar .gk i{display:block;height:100%;border-radius:3px;background:linear-gradient(90deg,#a60db2,#d83f4d)}
+.gbar .gv{font-size:10.5px;font-family:ui-monospace,Menlo,monospace;color:var(--sub)}
+.gtbl{margin-top:8px;border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.gtr{display:grid;grid-template-columns:1fr 52px 62px 46px;gap:6px;padding:6px 10px;align-items:baseline;border-top:1px solid var(--chipBg)}
+.gtr.h{background:var(--hoverbg);font-size:10px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--faint);border-top:none}
+.gtr span{font-size:10.5px;font-family:ui-monospace,Menlo,monospace;text-align:right;color:var(--sub2)}
+.gtr .d{font-size:11px;color:var(--text2);line-height:1.3;font-family:'Instrument Sans',system-ui,sans-serif;text-align:left}
+.gtr .d em{font-style:normal;font-size:9.5px;color:var(--faint);font-family:ui-monospace,Menlo,monospace}
+.genechip{font-size:11.5px;font-weight:600;font-family:ui-monospace,Menlo,monospace;color:var(--text2);background:var(--chipBg);border:1px solid var(--border);padding:3px 9px;border-radius:14px;display:inline-flex;align-items:center;gap:4px}
+.genechip:hover{color:var(--accent);border-color:var(--accentBorder);background:var(--accentBg)}
+.genechip i{font-style:normal;font-size:9px;opacity:.55}
+.loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--faint);font-family:ui-monospace,Menlo,monospace}
+.linkbtn{border:none;background:none;font-size:11.5px;font-weight:600;color:var(--accent);padding:0}
+.zbtn{border:1px solid var(--border2);background:var(--panel);color:var(--sub2);border-radius:6px;width:22px;height:22px;font-size:12px;line-height:1;padding:0}
+</style>
 </head>
-<body class="text-slate-800 font-sans min-h-screen flex flex-col">
-
-    <!-- Header -->
-    <header class="text-white p-6 shadow-md" style="background: var(--brand-gradient);">
-        <div class="max-w-7xl mx-auto flex justify-between items-center">
-            <div>
-                <h1 class="text-3xl font-bold tracking-tight">JAGUAR Project</h1>
-                <p class="text-white-800 mt-1">Interactive Cis-Co-accessible Network Explorer (CCANs)</p>
-            </div>
-            <div class="p-3 rounded-lg text-sm bg-slate-800">
-                <span class="font-semibold text-purple-400">Total CCANs:</span> <span id="total-count">Loading...</span>
-            </div>
+<body>
+<div class="app" id="app">
+  <header>
+    <button class="iconbtn" id="sidebtn" title="Toggle sidebar"><svg viewBox="0 0 16 16" width="14" height="14"><rect x="1.5" y="2.5" width="13" height="11" rx="2" fill="none" stroke="currentColor" stroke-width="1.4"/><line x1="6" y1="2.5" x2="6" y2="13.5" stroke="currentColor" stroke-width="1.4"/></svg></button>
+    <div style="display:flex;align-items:baseline;gap:10px"><div class="logo">JAGUAR</div><div style="font-size:13px;font-weight:500;color:var(--sub)">CCAN Explorer</div></div>
+    <div class="seg" id="viewseg"><button data-v="genome" class="on">Genome</button><button data-v="topic">Clusters</button></div>
+    <div style="display:flex;align-items:center;gap:6px;flex:none" id="colorwrap"><span style="font-size:11px;color:var(--faint);font-weight:600">Color</span><div class="seg sm" id="colorseg"><button data-c="chr" class="on">chr</button><button data-c="topic">cluster</button></div></div>
+    <button class="pill" id="gobtn" title="Dim CCANs without GO enrichment">GO terms only</button>
+    <div class="searchwrap">
+      <input id="q" placeholder="Search CCAN, chromosome, gene, or GO term" autocomplete="off">
+      <svg viewBox="0 0 16 16"><circle cx="7" cy="7" r="5" fill="none" stroke="#a8a29e" stroke-width="1.6"/><line x1="11" y1="11" x2="15" y2="15" stroke="#a8a29e" stroke-width="1.6"/></svg>
+      <div class="dd" id="dd" style="display:none"></div>
+    </div>
+    <div style="margin-left:auto;display:flex;align-items:center;gap:8px">
+      <div class="gochip" id="gochip" style="display:none"><span class="t" id="gochipT"></span><span style="font-family:ui-monospace,Menlo,monospace;flex:none" id="gochipN"></span><button id="gochipX">✕</button></div>
+      <button class="iconbtn" id="darkbtn" title="Toggle dark mode">☾</button>
+      <div style="font-size:12px;color:var(--sub)"><b style="color:var(--text)" id="total">—</b> CCANs</div>
+      <div style="font-size:11px;font-weight:600;color:var(--accent);background:var(--accentBg);border:1px solid var(--accentBorder);padding:3px 8px;border-radius:20px">hg38</div>
+    </div>
+  </header>
+  <aside>
+    <div class="side-title" id="sideTitle">Chromosomes</div>
+    <div class="side-rows" id="sideRows"></div>
+    <div class="legend"><div class="lt">Point size = peaks</div><div class="ld"><span><i style="width:5px;height:5px"></i>3</span><span><i style="width:9px;height:9px"></i>50</span><span><i style="width:15px;height:15px"></i>250</span></div></div>
+  </aside>
+  <main id="main">
+    <div class="loading" id="loading">loading ccan_index.json…</div>
+    <svg class="map" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid meet">
+      <defs><filter id="blobBlur" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="16"/></filter></defs>
+      <g id="blobs"></g><g id="pts"></g><g id="hits"></g>
+    </svg>
+    <div id="labels"></div>
+    <div class="chipbar" id="chipbar" style="display:none"><button class="backbtn" id="backbtn">←</button><div style="font-size:13px;color:var(--sub)"><b style="color:var(--text)" id="chipName"></b> · <span id="chipCount"></span> CCANs</div></div>
+    <div class="mini" id="mini" style="display:none"><div class="mh"><span id="miniL"></span><span id="miniR"></span></div><svg viewBox="0 0 1000 34" preserveAspectRatio="none" style="width:100%;height:34px;display:block"><rect x="0" y="12" width="1000" height="12" rx="6" fill="var(--track)"/><g id="miniG"></g></svg></div>
+    <div class="tip" id="tip"><div class="t1" id="tip1"></div><div class="t2" id="tip2"></div></div>
+    <div class="card" id="card" style="display:none"></div>
+  </main>
+</div>
+<script>
+'use strict';
+const CHR_LEN={chr1:248956422,chr2:242193529,chr3:198295559,chr4:190214555,chr5:181538259,chr6:170805979,chr7:159345973,chr8:145138636,chr9:138394717,chr10:133797422,chr11:135086622,chr12:133275309,chr13:114364328,chr14:107043718,chr15:101991189,chr16:90338345,chr17:83257441,chr18:80373285,chr19:58617616,chr20:64444167,chr21:46709983,chr22:50818468,chrX:156040895,chrY:57227415};
+const CHR_ORDER=['chr1','chr2','chr3','chr4','chr5','chr6','chr7','chr8','chr9','chr10','chr11','chr12','chr13','chr14','chr15','chr16','chr17','chr18','chr19','chr20','chr21','chr22','chrX','chrY'];
+const DISPERSION=0.6;
+const S={data:null,go:null,genes:null,view:'genome',colorBy:'chr',focusChr:null,focusCluster:null,sel:null,tab:'plot',rank:'p',goExpanded:false,goFilter:null,hasGoOnly:false,hoverRow:null,dark:false};
+const $=id=>document.getElementById(id);
+const fmt=n=>typeof n==='number'?n.toLocaleString('en-US'):'—';
+const fmtSize=kb=>kb>=1000?(kb/1000).toFixed(2)+' Mb':kb.toFixed(1)+' kb';
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function rng(seed){let a=(seed>>>0)||1;return()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+const chrColor=i=>`oklch(0.60 0.15 ${(i*137.508)%360})`;
+const chrColorSoft=i=>`oklch(0.75 0.10 ${(i*137.508)%360})`;
+const clusterColor=i=>i==null?'#c4beb6':`oklch(0.62 0.16 ${(i*137.508+80)%360})`;
+const clusterColorDark=i=>`oklch(var(--lblL,0.44) 0.15 ${(i*137.508+80)%360})`;
+let L=null,T=null,goIdx=null,geneIdx=null,byCcan=null;
+const czCache={};
+function genomeLayout(data){
+  const r0=rng(42),W=1200,H=800;
+  const chroms=CHR_ORDER.filter(ch=>data.some(d=>d.chromosome===ch));
+  const counts={};data.forEach(d=>counts[d.chromosome]=(counts[d.chromosome]||0)+1);
+  const clusters=chroms.map((ch,i)=>{const r=Math.min(78,16+Math.sqrt(counts[ch])*3.6);const ang=i*2.39996+(r0()-.5)*.9;const R=62*Math.sqrt(i+0.9);return{chr:ch,i,count:counts[ch],r,cx:600+R*Math.cos(ang),cy:400+R*Math.sin(ang)*0.72,angle:r0()*Math.PI,phase:r0()*Math.PI*2,color:chrColor(i)};});
+  for(let it=0;it<160;it++){
+    for(let a=0;a<clusters.length;a++)for(let b=a+1;b<clusters.length;b++){const A=clusters[a],B=clusters[b];let dx=B.cx-A.cx,dy=B.cy-A.cy,d=Math.hypot(dx,dy)||1;const min=A.r+B.r+14;if(d<min){const push=(min-d)/2;dx/=d;dy/=d;A.cx-=dx*push;A.cy-=dy*push;B.cx+=dx*push;B.cy+=dy*push;}}
+    clusters.forEach(c=>{c.cx+=(600-c.cx)*0.004;c.cy+=(400-c.cy)*0.004;c.cx=Math.max(c.r+24,Math.min(W-c.r-24,c.cx));c.cy=Math.max(c.r+34,Math.min(H-c.r-24,c.cy));});
+  }
+  const byChr={};clusters.forEach(c=>byChr[c.chr]=c);
+  const pts=data.map(d=>{const cl=byChr[d.chromosome];if(!cl)return null;const rr=rng(d.ccan*2654435761);const g1=rr()+rr()+rr()-1.5,g2=rr()+rr()+rr()-1.5;const t=Math.min(1,((d.start+d.end)/2)/CHR_LEN[d.chromosome]);const len=cl.r*2.15,wid=cl.r*1.05;const dAxis=(t-.5)*len+g2*len*.07*DISPERSION;const perp=Math.sin(t*Math.PI*2.6+cl.phase)*wid*.28+g1*wid*.34*DISPERSION;const ca=Math.cos(cl.angle),sa=Math.sin(cl.angle);return{d,cluster:cl,gx:cl.cx+dAxis*ca-perp*sa,gy:cl.cy+dAxis*sa+perp*ca,gr:1.9+Math.sqrt(d.n_peaks)*.40,jy:g1};}).filter(Boolean);
+  return{clusters,byChr,pts};
+}
+function topicLayout(data){
+  const withU=data.filter(d=>d.umap1!=null);
+  const xs=withU.map(d=>d.umap1),ys=withU.map(d=>d.umap2);
+  const minX=Math.min(...xs),maxX=Math.max(...xs),minY=Math.min(...ys),maxY=Math.max(...ys);
+  const s=Math.min(1020/((maxX-minX)||1),620/((maxY-minY)||1));
+  const ox=(1200-s*(maxX-minX))/2,oy=(800-s*(maxY-minY))/2+15;
+  const pos=new Map(),agg={};
+  withU.forEach(d=>{const x=ox+(d.umap1-minX)*s,y=800-(oy+(d.umap2-minY)*s);pos.set(d.ccan,{x,y});const c=d.leiden_cluster;if(c!=null){if(!agg[c])agg[c]={sx:0,sy:0,n:0};agg[c].sx+=x;agg[c].sy+=y;agg[c].n++;}});
+  const clusters=Object.keys(agg).map(Number).sort((a,b)=>a-b).map(id=>({id,count:agg[id].n,cx:agg[id].sx/agg[id].n,cy:agg[id].sy/agg[id].n,color:clusterColor(id)}));
+  return{pos,clusters};
+}
+function clusterZoom(cid){
+  if(czCache[cid])return czCache[cid];
+  const pts=S.data.filter(d=>d.leiden_cluster===cid&&d.umap1!=null);
+  const xs=pts.map(d=>d.umap1),ys=pts.map(d=>d.umap2);
+  const minX=Math.min(...xs),maxX=Math.max(...xs),minY=Math.min(...ys),maxY=Math.max(...ys);
+  const midX=(minX+maxX)/2,midY=(minY+maxY)/2;
+  const s=Math.min(940/((maxX-minX)||1e-6),500/((maxY-minY)||1e-6));
+  const pos=new Map();
+  pts.forEach(d=>pos.set(d.ccan,{x:600+(d.umap1-midX)*s,y:385-(d.umap2-midY)*s}));
+  return czCache[cid]=pos;
+}
+function zoomPos(pt,chrPts){
+  const starts=chrPts.map(p=>p.d.start),ends=chrPts.map(p=>p.d.end);
+  const minS=Math.min(...starts),maxE=Math.max(...ends),span=Math.max(1,maxE-minS);
+  const t=(((pt.d.start+pt.d.end)/2)-minS)/span;
+  const x=90+t*1020;
+  const y=385+Math.sin(t*Math.PI*2.2+pt.cluster.phase)*62+pt.jy*105*DISPERSION;
+  return{x,y:Math.max(110,Math.min(620,y)),r:4.2+Math.sqrt(pt.d.n_peaks)*1.05};
+}
+function toScreen(x,y){const m=$('main');const w=m.clientWidth||900,h=m.clientHeight||700;const s=Math.min(w/1200,h/800);return{x:(w-1200*s)/2+x*s,y:(h-800*s)/2+y*s};}
+const hasGo=d=>S.go?Object.prototype.hasOwnProperty.call(S.go,d.ccan):d.is_great_significant;
+// ---------- boot ----------
+Promise.all([
+  fetch('ccan_index.json').then(r=>r.json()),
+  fetch('ccan_go.json').then(r=>r.json()).catch(()=>null),
+  fetch('ccan_genes.json').then(r=>r.json()).catch(()=>null)
+]).then(([data,go,genes])=>{
+  S.data=data;S.go=go;S.genes=genes;
+  byCcan=new Map(data.map(d=>[d.ccan,d]));
+  L=genomeLayout(data);T=topicLayout(data);
+  if(go){const m=new Map();for(const[c,rows]of Object.entries(go))for(const r of rows){let e=m.get(r[1]);if(!e){e={desc:r[1],ccans:new Set()};m.set(r[1],e);}e.ccans.add(+c);}goIdx=[...m.values()];}
+  if(genes){const m=new Map();for(const[c,arr]of Object.entries(genes))for(const g of arr){if(!m.has(g[1]))m.set(g[1],[]);m.get(g[1]).push(+c);}geneIdx=[...m.entries()].map(([sym,ccans])=>({sym,ccans}));}
+  $('loading').style.display='none';
+  $('total').textContent=fmt(data.length);
+  buildCircles();update();
+});
+try{if(localStorage.getItem('jaguarDark')==='1'){document.body.classList.add('dark');S.dark=true;$('darkbtn').textContent='☀';}}catch(e){}
+// ---------- circles (built once, styled per state) ----------
+const circleByCcan=new Map();
+function buildCircles(){
+  const g=$('pts');
+  const frag=document.createDocumentFragment();
+  L.pts.forEach(pt=>{
+    const c=document.createElementNS('http://www.w3.org/2000/svg','circle');
+    c.setAttribute('class','pt');
+    c.addEventListener('mouseenter',e=>ptHover(pt,e));
+    c.addEventListener('mousemove',e=>ptHover(pt,e));
+    c.addEventListener('mouseleave',hideTip);
+    c.addEventListener('click',e=>{e.stopPropagation();ptClick(pt);});
+    circleByCcan.set(pt.d.ccan,c);
+    frag.appendChild(c);
+  });
+  g.appendChild(frag);
+}
+function ptHover(pt,e){
+  const d=pt.d;
+  showTip(e,'CCAN '+d.ccan,`${d.chromosome}:${fmt(d.start)}–${fmt(d.end)} · ${d.n_peaks} peaks`+(S.view==='topic'&&d.leiden_cluster!=null?` · cluster ${d.leiden_cluster}`:''));
+}
+function ptClick(pt){
+  const d=pt.d;
+  if(S.view==='topic'&&S.focusCluster==null){S.focusCluster=d.leiden_cluster??null;S.sel=null;hideTip();update();return;}
+  select(d);
+}
+function select(d){
+  S.sel=d;
+  if(S.view==='genome')S.focusChr=d.chromosome;else S.focusCluster=d.leiden_cluster??null;
+  S.tab=S.tab||'plot';S.goExpanded=false;hideTip();$('q').value='';$('dd').style.display='none';
+  update();
+}
+function updatePoints(){
+  const gset=S.goFilter?S.goFilter.set:null;
+  const focusPts=S.view==='genome'&&S.focusChr?L.pts.filter(p=>p.d.chromosome===S.focusChr):null;
+  const czoom=S.view==='topic'&&S.focusCluster!=null?clusterZoom(S.focusCluster):null;
+  L.pts.forEach(pt=>{
+    const d=pt.d,el=circleByCcan.get(d.ccan);
+    let x,y,r,op,interactive,fill;
+    if(S.view==='genome'){
+      x=pt.gx;y=pt.gy;r=pt.gr;op=0.85;
+      const isF=d.chromosome===S.focusChr;
+      if(S.focusChr){if(isF){const z=zoomPos(pt,focusPts);x=z.x;y=z.y;r=z.r;op=0.92;}else op=0;}
+      else if(S.hoverRow!=null)op=d.chromosome===S.hoverRow?1:0.12;
+      if(gset&&op>0)op=gset.has(d.ccan)?Math.max(op,0.95):0.05;
+      if(S.hasGoOnly&&op>0)op=hasGo(d)?Math.max(op,0.92):Math.min(op,0.07);
+      interactive=S.focusChr&&isF&&op>0.1;
+      fill=S.colorBy==='topic'?clusterColor(d.leiden_cluster):pt.cluster.color;
+    }else{
+      const p0=T.pos.get(d.ccan);
+      const inF=S.focusCluster!=null&&d.leiden_cluster===S.focusCluster;
+      const p=inF&&czoom?czoom.get(d.ccan):p0;
+      op=0.85;r=p0?2.2+Math.sqrt(d.n_peaks)*.45:pt.gr;
+      if(!p0)op=0;
+      else if(S.focusCluster!=null){if(inF){op=0.92;r=4.2+Math.sqrt(d.n_peaks)*1.05;}else op=0;}
+      else if(S.hoverRow!=null)op=d.leiden_cluster===S.hoverRow?1:0.1;
+      if(op>0){if(gset)op=gset.has(d.ccan)?Math.max(op,0.95):0.05;if(S.hasGoOnly)op=hasGo(d)?Math.max(op,0.92):Math.min(op,0.07);}
+      x=p?p.x:pt.gx;y=p?p.y:pt.gy;
+      interactive=!!p0&&op>0.1;
+      fill=clusterColor(d.leiden_cluster);
+    }
+    const isSel=S.sel&&S.sel.ccan===d.ccan;
+    el.setAttribute('fill',fill);
+    el.setAttribute('stroke',isSel?'#1c1917':'none');
+    el.setAttribute('stroke-width',isSel?2:0);
+    const st=el.style;st.cx=x+'px';st.cy=y+'px';st.r=r+'px';st.opacity=op;st.cursor=interactive?'pointer':'default';st.pointerEvents=interactive?'auto':'none';
+  });
+}
+// ---------- overlays ----------
+function renderOverlay(){
+  const blobs=$('blobs'),hits=$('hits'),labels=$('labels');
+  blobs.innerHTML='';hits.innerHTML='';labels.innerHTML='';
+  if(S.view==='genome'&&!S.focusChr){
+    L.clusters.forEach(c=>{
+      const h=document.createElementNS('http://www.w3.org/2000/svg','ellipse');
+      h.setAttribute('cx',c.cx);h.setAttribute('cy',c.cy);h.setAttribute('rx',c.r*1.25);h.setAttribute('ry',c.r*.78);
+      h.setAttribute('transform',`rotate(${c.angle*180/Math.PI} ${c.cx} ${c.cy})`);
+      h.setAttribute('fill','transparent');h.style.cursor='pointer';
+      h.addEventListener('click',e=>{e.stopPropagation();S.focusChr=c.chr;S.sel=null;hideTip();update();});
+      h.addEventListener('mouseenter',e=>showTip(e,c.chr,c.count+' CCANs · click to explore'));
+      h.addEventListener('mousemove',e=>showTip(e,c.chr,c.count+' CCANs · click to explore'));
+      h.addEventListener('mouseleave',hideTip);
+      hits.appendChild(h);
+      const lp=toScreen(c.cx,c.cy-c.r*.72-10);
+      const lb=document.createElement('div');lb.className='lbl';lb.textContent=c.chr;
+      const hov=S.hoverRow===c.chr;
+      lb.style.cssText=`left:${lp.x}px;top:${lp.y}px;transform:translate(-50%,-100%);font-size:${hov?14:12.5}px;font-weight:${hov?700:600};color:${hov?'var(--accent)':'var(--sub2)'}`;
+      lb.addEventListener('click',e=>{e.stopPropagation();S.focusChr=c.chr;S.sel=null;update();});
+      labels.appendChild(lb);
+    });
+  }
+  if(S.view==='topic'&&S.focusCluster==null){
+    T.clusters.forEach(c=>{
+      const lp=toScreen(c.cx,c.cy);
+      const lb=document.createElement('div');lb.className='lbl';lb.textContent=c.id;
+      const active=S.hoverRow===c.id;
+      lb.style.cssText=`left:${lp.x}px;top:${lp.y}px;transform:translate(-50%,-50%);font-size:${active?16:13.5}px;font-weight:700;color:${clusterColorDark(c.id)}`;
+      lb.addEventListener('click',e=>{e.stopPropagation();S.focusCluster=c.id;S.sel=null;update();});
+      labels.appendChild(lb);
+    });
+  }
+}
+function renderChip(){
+  const on=S.view==='genome'?!!S.focusChr:S.focusCluster!=null;
+  $('chipbar').style.display=on?'flex':'none';
+  if(!on)return;
+  $('backbtn').textContent=S.view==='genome'?'← All chromosomes':'← All clusters';
+  if(S.view==='genome'){$('chipName').textContent=S.focusChr;$('chipCount').textContent=L.byChr[S.focusChr].count;}
+  else{const fc=T.clusters.find(c=>c.id===S.focusCluster);$('chipName').textContent='Cluster '+S.focusCluster;$('chipCount').textContent=fc?fc.count:0;}
+}
+function renderMini(){
+  const on=S.view==='genome'&&!!S.focusChr;
+  $('mini').style.display=on?'block':'none';
+  if(!on)return;
+  const chrLen=CHR_LEN[S.focusChr];
+  $('miniL').textContent=S.focusChr+' · genomic position';
+  $('miniR').textContent=Math.round(chrLen/1e6)+' Mb';
+  const g=$('miniG');g.innerHTML='';
+  L.pts.filter(p=>p.d.chromosome===S.focusChr).forEach(pt=>{
+    const d=pt.d,isSel=S.sel&&S.sel.ccan===d.ccan;
+    const r=document.createElementNS('http://www.w3.org/2000/svg','rect');
+    r.setAttribute('x',(d.start/chrLen*1000).toFixed(1));
+    r.setAttribute('width',Math.max(2.5,(d.end-d.start)/chrLen*1000).toFixed(1));
+    r.setAttribute('y',isSel?6:12);r.setAttribute('height',isSel?24:12);r.setAttribute('rx',1.5);
+    r.setAttribute('fill',pt.cluster.color);
+    if(isSel){r.setAttribute('stroke','#1c1917');r.setAttribute('stroke-width',1);}
+    r.style.cursor='pointer';
+    r.addEventListener('click',e=>{e.stopPropagation();select(d);});
+    g.appendChild(r);
+  });
+}
+function renderSide(){
+  $('sideTitle').textContent=S.view==='genome'?'Chromosomes':'Clusters (Leiden)';
+  const rows=$('sideRows');rows.innerHTML='';
+  const list=S.view==='genome'?L.clusters:T.clusters;
+  const maxCt=Math.max(...list.map(c=>c.count));
+  list.forEach(c=>{
+    const key=S.view==='genome'?c.chr:c.id;
+    const on=S.view==='genome'?S.focusChr===c.chr:S.focusCluster===c.id;
+    const b=document.createElement('button');
+    b.className='row'+(on?' on':'');
+    b.innerHTML=`<span class="dot" style="background:${c.color}"></span><span class="nm">${S.view==='genome'?c.chr.replace('chr','chr '):'Cluster '+c.id}</span><span class="bar"><i style="background:${c.color};width:${Math.round(c.count/maxCt*100)}%"></i></span><span class="ct">${c.count}</span>`;
+    b.addEventListener('click',()=>{if(S.view==='genome')S.focusChr=on?null:c.chr;else S.focusCluster=on?null:c.id;S.sel=null;update();});
+    b.addEventListener('mouseenter',()=>{S.hoverRow=key;updatePoints();renderOverlay();});
+    b.addEventListener('mouseleave',()=>{S.hoverRow=null;updatePoints();renderOverlay();});
+    rows.appendChild(b);
+  });
+}
+// ---------- tooltip ----------
+function showTip(e,t1,t2){const t=$('tip');t.style.display='block';t.style.left=e.clientX+'px';t.style.top=e.clientY+'px';$('tip1').textContent=t1;$('tip2').textContent=t2;}
+function hideTip(){$('tip').style.display='none';}
+// ---------- detail card ----------
+function renderCard(){
+  const card=$('card');
+  if(!S.sel){card.style.display='none';return;}
+  const d=S.sel,cl=L.byChr[d.chromosome];
+  const rows=(S.go&&S.go[d.ccan])||[];
+  const sorted=[...rows].sort(S.rank==='p'?((a,b)=>a[3]-b[3]):((a,b)=>b[2]-a[2]));
+  const nl10=p=>p<=0?320:-Math.log10(p);
+  let body='';
+  if(S.tab==='plot'){
+    body=`<div style="padding:12px 16px"><div style="border:1px solid var(--border);border-radius:10px;overflow:hidden">
+      <div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--hoverbg);border-bottom:1px solid var(--border)">
+        <span style="flex:1;font-size:10.5px;color:var(--sub);font-family:ui-monospace,Menlo,monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(d.pdf_url.split('/').pop())}</span>
+        <a href="${esc(d.pdf_url)}" target="_blank" style="font-size:11.5px;font-weight:600">Open ↗</a>
+      </div>
+      <iframe src="${esc(d.pdf_url)}#toolbar=0&navpanes=0" style="width:100%;height:300px;border:none;display:block;background:#fff" title="CCAN ${d.ccan} track plot"></iframe>
+    </div></div>`;
+  }else if(S.tab==='great'){
+    let bars='';
+    const top=sorted.slice(0,10);
+    if(top.length){
+      const vals=top.map(r=>S.rank==='p'?nl10(r[3]):r[2]);
+      const mx=Math.max(...vals)||1;
+      bars=top.map((r,i)=>`<div class="gbar"><div class="gt" title="${esc(r[1])}">${esc(r[1])}</div><div class="gk"><i style="width:${Math.max(2,Math.round(vals[i]/mx*100))}%"></i></div><div class="gv">${S.rank==='p'?(r[3]<=0?'>300':nl10(r[3]).toFixed(1)):(r[2]>=100?Math.round(r[2])+'×':r[2].toFixed(1)+'×')}</div></div>`).join('');
+    }
+    const tbl=S.goExpanded?`<div class="gtbl"><div class="gtr h"><span class="d">Term</span><span>Fold</span><span>adj p</span><span>Genes</span></div><div style="max-height:230px;overflow-y:auto">${sorted.map(r=>`<div class="gtr"><span class="d">${esc(r[1])} <em>${esc(r[0])}</em></span><span>${r[2]>=100?Math.round(r[2]):r[2].toFixed(1)}</span><span>${r[3]<=0?'~0':r[3].toExponential(1)}</span><span>${r[4]}/${r[5]}</span></div>`).join('')}</div></div>`:'';
+    body=`<div style="padding:12px 16px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:8px">
+        <div style="font-size:12px;font-weight:600;color:var(--sub2)">GO Biological Process · ${rows.length} terms</div>
+        <div class="seg sm"><button data-action="rank-p" class="${S.rank==='p'?'on':''}">adj p</button><button data-action="rank-fe" class="${S.rank==='fe'?'on':''}">fold enr.</button></div>
+      </div>
+      ${rows.length===0?'<div style="padding:24px 0;text-align:center;font-size:12px;color:var(--faint)">No enriched GO terms for this CCAN</div>':''}
+      <div style="display:flex;flex-direction:column;gap:7px">${bars}</div>
+      ${rows.length?`<div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:10px"><button class="linkbtn" data-action="go-toggle">${S.goExpanded?'Hide full table ▴':'Show all '+rows.length+' terms ▾'}</button><div style="font-size:10.5px;color:var(--faint);font-family:ui-monospace,Menlo,monospace">${S.rank==='p'?'−log₁₀(adj p)':'fold enrichment'}</div></div>`:''}
+      ${tbl}
+    </div>`;
+  }else{
+    const gl=(S.genes&&S.genes[d.ccan])||[];
+    body=`<div style="padding:12px 16px">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px 14px;margin-bottom:12px">
+        <div><div class="kv-k" style="font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);font-weight:600">Genes</div><div style="font-size:15px;font-weight:700;margin-top:2px">${fmt(d.n_genes)}</div></div>
+        <div><div style="font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);font-weight:600">≤2 genes</div><div style="font-size:15px;font-weight:700;margin-top:2px">${d.le2_genes?'yes':'no'}</div></div>
+        <div><div style="font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);font-weight:600">GREAT signif.</div><div style="font-size:15px;font-weight:700;margin-top:2px">${d.is_great_significant?'yes':'no'}</div></div>
+      </div>
+      ${gl.length===0?'<div style="padding:18px 0;text-align:center;font-size:12px;color:var(--faint)">No gene assignments for this CCAN</div>':''}
+      <div style="display:flex;flex-wrap:wrap;gap:6px;max-height:240px;overflow-y:auto">
+        ${gl.map(g=>`<a class="genechip" href="https://www.ncbi.nlm.nih.gov/gene/${esc(g[0])}" target="_blank" title="Open in NCBI Gene (Entrez)">${esc(g[1])}<i>↗</i></a>`).join('')}
+      </div>
+    </div>`;
+  }
+  card.innerHTML=`
+    <div class="hd">
+      <div style="flex:1">
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="font-size:17px;font-weight:700;letter-spacing:-.01em">CCAN ${d.ccan}</div>
+          <div class="badge" style="background:${cl?cl.color:'var(--accent)'}">${esc(d.chromosome)}</div>
+          ${d.leiden_cluster!=null?`<div class="badge" style="background:${clusterColor(d.leiden_cluster)}">cluster ${d.leiden_cluster}</div>`:''}
         </div>
-    </header>
-
-    <!-- Main Content -->
-    <main class="flex-grow max-w-7xl mx-auto w-full p-6 flex flex-col gap-6">
-        
-        <!-- Instructions / Controls Panel -->
-        <div class="bg-white p-5 rounded-lg shadow-sm border border-slate-200 flex flex-col md:flex-row justify-between items-center gap-4">
-            <div>
-                <h2 class="text-lg font-semibold text-purple-800 mb-1">Complete Genomic Map</h2>
-                <p class="text-sm text-slate-500">Click a red marker to load the CCAN PDF in the side panel. The filter lets you isolate specific chromosomes.</p>
-            </div>
-            <div class="flex items-center gap-2">
-                <label for="chr-filter" class="text-sm font-medium text-purple-800">Filter Chromosome:</label>
-                <select id="chr-filter" class="bg-slate-50 border border-slate-300 text-slate-900 text-sm rounded-lg focus:ring-purple-500 focus:border-purple-500 block p-2.5">
-                    <option value="all">View All</option>
-                    <!-- Options will be filled by JS -->
-                </select>
-            </div>
-        </div>
-
-        <section class="grid grid-cols-1 xl:grid-cols-[1.6fr_1fr] gap-6 items-start">
-            <div class="space-y-4">
-                <div class="bg-white p-4 rounded-lg shadow-sm border border-slate-200">
-                    <div class="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-                        <div>
-                            <h2 class="text-lg font-semibold text-purple-800">CCAN Map</h2>
-                        </div>
-                        <div class="text-xs text-slate-400">
-                            Click a marker to change the document
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Container where Ideogram.js will render -->
-                <div id="ideo-container"></div>
-            </div>
-
-            <aside class="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden sticky top-6">
-                <div class="border-b border-slate-200 p-4 bg-slate-50 flex items-start justify-between gap-4">
-                    <div>
-                        <h3 class="text-base font-semibold text-purple-800">CCAN PDF</h3>
-                        <p id="pdf-title" class="text-sm text-slate-500">Select a marker to load the plot.</p>
-                    </div>
-                    <a id="pdf-open-link" href="#" target="_blank" rel="noopener noreferrer" class="text-sm font-medium text-purple-600 hover:text-orange-700 hidden sm:inline">
-                        Open
-                    </a>
-                </div>
-                <div id="pdf-empty-state" class="p-4 flex items-center justify-center text-sm text-slate-400">
-                    The PDF viewer will appear here.
-                    Ojala, quien sabe, a lo mejor no cargo bien.
-                </div>
-                <div class="h-[34rem]">
-                    <iframe id="pdf-frame" title="CCAN PDF Viewer" loading="lazy"></iframe>
-                </div>
-
-                <!-- Selected CCAN information panel -->
-                <div id="ccan-info" class="border-t border-slate-200 p-4 bg-slate-50">
-                    <h4 class="text-purple-800 font-semibold mb-3 ">CCAN Information</h4>
-                    <dl class="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
-                        <div>
-                            <dt class="text-xs uppercase tracking-wide text-slate-400">CCAN</dt>
-                            <dd id="info-ccan" class="font-medium text-slate-800">—</dd>
-                        </div>
-                        <div>
-                            <dt class="text-xs uppercase tracking-wide text-slate-400">Chromosome</dt>
-                            <dd id="info-chr" class="font-medium text-slate-800">—</dd>
-                        </div>
-                        <div>
-                            <dt class="text-xs uppercase tracking-wide text-slate-400">Start (bp)</dt>
-                            <dd id="info-start" class="font-medium text-slate-800">—</dd>
-                        </div>
-                        <div>
-                            <dt class="text-xs uppercase tracking-wide text-slate-400">End (bp)</dt>
-                            <dd id="info-end" class="font-medium text-slate-800">—</dd>
-                        </div>
-                        <div>
-                            <dt class="text-xs uppercase tracking-wide text-slate-400">Size</dt>
-                            <dd id="info-size" class="font-medium text-slate-800">—</dd>
-                        </div>
-                        <div>
-                            <dt class="text-xs uppercase tracking-wide text-slate-400">No. of peaks</dt>
-                            <dd id="info-peaks" class="font-medium text-slate-800">—</dd>
-                        </div>
-                    </dl>
-                </div>
-            </aside>
-        </section>
-        
-    </main>
-
-    <!-- Footer -->
-    <footer class="text-white text-center p-4 text-sm mt-auto" style="background: var(--brand-gradient);">
-        Automatically generated from R data. CCAN track plots.
-    </footer>
-
-    <!-- Application logic -->
-    <script>
-        // ---------------------------------------------------------
-        // 1. MOCK DATA
-        // ---------------------------------------------------------
-        const mockData = [
-            { ccan: 1, chromosome: "chr1", start: 100132256, end: 100400828, n_peaks: 4, size_kb: 268.572, pdf_url: "4_figures/chr1/CCAN_1_track_plot.pdf" },
-            { ccan: 2, chromosome: "chr1", start: 629139, end: 2927743, n_peaks: 96, size_kb: 2298.604, pdf_url: "4_figures/chr1/CCAN_2_track_plot.pdf" },
-            { ccan: 3, chromosome: "chr1", start: 7549163, end: 10485070, n_peaks: 129, size_kb: 2935.907, pdf_url: "4_figures/chr1/CCAN_3_track_plot.pdf" },
-            { ccan: 5, chromosome: "chr1", start: 100522609, end: 100540179, n_peaks: 5, size_kb: 17.570, pdf_url: "4_figures/chr1/CCAN_5_track_plot.pdf" },
-            // Added one synthetic example on chr12 to show variety
-            { ccan: 1025, chromosome: "chr12", start: 113040427, end: 113041384, n_peaks: 25, size_kb: 0.95, pdf_url: "4_figures/chr12/CCAN_1025_track_plot.pdf" }
-        ];
-
-        // Global variable to store the Ideogram instance
-        let ideogram;
-        let selectedPdfUrl = '';
-
-        function formatBp(value) {
-            return typeof value === 'number' ? value.toLocaleString() : '—';
-        }
-
-        function formatSizeKb(value) {
-            if (typeof value !== 'number') return '—';
-            return value >= 1000
-                ? `${(value / 1000).toLocaleString(undefined, { maximumFractionDigits: 2 })} Mb`
-                : `${value.toLocaleString(undefined, { maximumFractionDigits: 2 })} kb`;
-        }
-
-        function updatePdfViewer(annot) {
-            const frame = document.getElementById('pdf-frame');
-            const title = document.getElementById('pdf-title');
-            const emptyState = document.getElementById('pdf-empty-state');
-            const openLink = document.getElementById('pdf-open-link');
-            // Compatibility with different field names
-            const url = annot.url || annot.pdf_url || annot.pdf || annot.href || '';
-            selectedPdfUrl = url;
-            frame.src = url;
-            title.textContent = `${annot.name || 'CCAN'} · chr${annot.chr || ''}`;
-            emptyState.style.display = 'none';
-            openLink.href = url;
-            openLink.classList.remove('hidden');
-
-            // Fill the CCAN information panel
-            document.getElementById('info-ccan').textContent = annot.name || '—';
-            document.getElementById('info-chr').textContent = annot.chr ? `chr${annot.chr}` : '—';
-            document.getElementById('info-start').textContent = formatBp(annot.start);
-            document.getElementById('info-end').textContent = formatBp(annot.stop);
-            document.getElementById('info-size').textContent = formatSizeKb(annot.size);
-            document.getElementById('info-peaks').textContent = typeof annot.peaks === 'number' ? annot.peaks.toLocaleString() : '—';
-        }
-
-        function getDefaultAnnotation(annotations) {
-            return annotations[0];
-        }
-
-        function bindAnnotationMarkerClicks(annotationsToUse) {
-            window.requestAnimationFrame(() => {
-                const markers = document.querySelectorAll('#ideo-container .annot');
-
-                markers.forEach((marker, index) => {
-                    marker.style.cursor = 'pointer';
-                    marker.onclick = () => {
-                        const annot = annotationsToUse[index];
-                        if (annot) {
-                            updatePdfViewer(annot);
-                        }
-                    };
-                });
-            });
-        }
-
-        // ---------------------------------------------------------
-        // 2. MAIN FUNCTION
-        // ---------------------------------------------------------
-        async function initApp() {
-            let rawData = [];
-            
-            try {
-                // TRY TO LOAD YOUR REAL JSON:
-                // If this HTML is in the same folder as ccan_index.json, it will read it.
-                const response = await fetch('ccan_index.json');
-                if (!response.ok) throw new Error("Local JSON not found");
-                rawData = await response.json();
-                console.log("Data loaded from ccan_index.json");
-            } catch (error) {
-                // IF IT FAILS (e.g. opening the HTML directly without a web server), USE THE MOCK DATA
-                console.warn("Could not load ccan_index.json (you probably need a local server). Using mock data.");
-                rawData = mockData;
-            }
-
-            // Update counter
-            document.getElementById('total-count').textContent = rawData.length;
-
-            // Transform your data into the format required by Ideogram.js
-            const annotations = rawData.map(item => {
-                return {
-                    name: `CCAN ${item.ccan}`,
-                    // Ideogram.js expects "1", not "chr1", so we remove the "chr" prefix
-                    chr: item.chromosome.replace("chr", ""),
-                    start: item.start,
-                    stop: item.end,
-                    // Extra fields used on click or in the tooltip
-                    url: item.pdf_url,
-                    peaks: item.n_peaks,
-                    size: item.size_kb,
-                    color: "#e11d48", // Tailwind Rose-600
-                    shape: "triangle" 
-                };
-            });
-
-            // Populate the chromosome filter
-            populateChromosomeFilter(annotations);
-
-            // Draw the initial ideogram
-            renderIdeogram(annotations);
-
-            updatePdfViewer(getDefaultAnnotation(annotations));
-
-            // Add the filter event handler
-            document.getElementById('chr-filter').addEventListener('change', (e) => {
-                const selectedChr = e.target.value;
-                if (selectedChr === 'all') {
-                    renderIdeogram(annotations); // Show all
-                } else {
-                    renderIdeogram(annotations, selectedChr); // Show one specific chromosome
-                }
-
-                const visibleAnnotation = selectedChr === 'all'
-                    ? getDefaultAnnotation(annotations)
-                    : annotations.find(item => item.chr === selectedChr);
-
-                if (visibleAnnotation) {
-                    updatePdfViewer(visibleAnnotation);
-                }
-            });
-        }
-
-        // ---------------------------------------------------------
-        // 3. RENDERING FUNCTIONS (IDEOGRAM.JS)
-        // ---------------------------------------------------------
-        function renderIdeogram(annotations, singleChr = null) {
-            const container = document.getElementById('ideo-container');
-                
-            // 1. Capture the width BEFORE clearing the container to avoid measuring 0
-            let safeWidth = container.clientWidth;
-                
-            // Clear the previous container contents
-            container.innerHTML = '';
-                
-            const annotationsToUse = singleChr
-                ? annotations.filter(item => item.chr === singleChr)
-                : annotations;
-
-            // If we are showing a single chromosome, render a linear SVG map
-            // with clickable regions. This avoids Ideogram rasterization issues
-            // in single-chromosome views and ensures clicks open the PDF.
-            if (singleChr) {
-                // If there are no annotations, show a message
-                if (!annotationsToUse || annotationsToUse.length === 0) {
-                    container.innerHTML = '<div class="p-6 text-sm text-slate-500">There are no CCANs for this chromosome.</div>';
-                    return;
-                }
-
-                const width = 240;
-                const height = Math.max(container.clientHeight - 40, 700);
-                const svgNS = 'http://www.w3.org/2000/svg';
-                const svg = document.createElementNS(svgNS, 'svg');
-                svg.setAttribute('width', width);
-                svg.setAttribute('height', height);
-                svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
-                // Allow labels and the popover to render outside the base area if needed
-                svg.style.overflow = 'visible';
-
-                // Sort by genomic position so the grouping algorithm
-                // processes annotations in their real top-to-bottom order.
-                const sortedAnnotations = [...annotationsToUse].sort((a, b) => a.start - b.start);
-
-                // Compute the genome span from annotations to scale positions
-                const minStart = Math.min(...sortedAnnotations.map(a => a.start));
-                const maxEnd = Math.max(...sortedAnnotations.map(a => a.stop));
-                const span = Math.max(1, maxEnd - minStart);
-
-                // Draw the vertical chromosome backbone
-                const backboneX = Math.round(width / 2 - 60);
-                const backboneWidth = 36;
-                const backbone = document.createElementNS(svgNS, 'rect');
-                backbone.setAttribute('x', backboneX.toString());
-                backbone.setAttribute('y', 20);
-                backbone.setAttribute('width', backboneWidth.toString());
-                backbone.setAttribute('height', (height - 40).toString());
-                backbone.setAttribute('fill', '#f1f5f9');
-                backbone.setAttribute('rx', 8);
-                svg.appendChild(backbone);
-
-                // Prepare defs for the arrow marker
-                const defs = document.createElementNS(svgNS, 'defs');
-                const marker = document.createElementNS(svgNS, 'marker');
-                marker.setAttribute('id', 'arrow');
-                marker.setAttribute('markerWidth', '8');
-                marker.setAttribute('markerHeight', '8');
-                marker.setAttribute('refX', '0');
-                marker.setAttribute('refY', '3');
-                marker.setAttribute('orient', 'auto');
-                const markerPath = document.createElementNS(svgNS, 'path');
-                markerPath.setAttribute('d', 'M0,0 L0,6 L6,3 z');
-                markerPath.setAttribute('fill', '#0f172a');
-                marker.appendChild(markerPath);
-                defs.appendChild(marker);
-                svg.appendChild(defs);
-
-                // Popover state (expandable list) for CCAN clusters
-                let openPopover = null;
-                function closePopover() {
-                    if (openPopover) {
-                        openPopover.remove();
-                        openPopover = null;
-                    }
-                }
-                // Close the popover if the user clicks an empty area of the SVG
-                svg.addEventListener('click', (e) => {
-                    if (e.target === svg || e.target === backbone) closePopover();
-                });
-
-                // Calculate pixel positions (y, height, center) for each CCAN from its real genomic position
-                const items = sortedAnnotations.map(a => {
-                    const y = 20 + ((a.start - minStart) / span) * (height - 40);
-                    const h = Math.max(8, ((a.stop - a.start) / span) * (height - 40));
-                    return { a, y, h, centerY: y + h / 2 };
-                });
-
-                // Always draw the rectangles at their real genomic positions (this does not change,
-                // only the grouping of the text labels drawn below).
-                items.forEach(item => {
-                    const rect = document.createElementNS(svgNS, 'rect');
-                    rect.setAttribute('x', (backboneX - 8).toString());
-                    rect.setAttribute('y', item.y.toString());
-                    rect.setAttribute('width', (backboneWidth + 16).toString());
-                    rect.setAttribute('height', item.h.toString());
-                    rect.setAttribute('fill', item.a.color || '#e11d48');
-                    rect.setAttribute('opacity', '0.95');
-                    rect.setAttribute('stroke', '#7f1d1d');
-                    rect.setAttribute('stroke-width', '0.5');
-                    rect.style.cursor = 'pointer';
-
-                    rect.addEventListener('mouseenter', () => rect.setAttribute('fill', '#fb7185'));
-                    rect.addEventListener('mouseleave', () => rect.setAttribute('fill', item.a.color || '#e11d48'));
-                    rect.addEventListener('click', () => {
-                        closePopover();
-                        updatePdfViewer(item.a);
-                    });
-
-                    const title = document.createElementNS(svgNS, 'title');
-                    title.textContent = `${item.a.name} (${formatBp(item.a.start)} - ${formatBp(item.a.stop)})`;
-                    rect.appendChild(title);
-
-                    item.rect = rect;
-                    svg.appendChild(rect);
-                });
-
-                // --- Group labels into clusters when they would otherwise be too close ---
-                // The grouping decision is now based on real genomic distance (Mb),
-                // not pixels: two CCANs are merged into one cluster only if the distance
-                // between the end of one and the start of the next is below this threshold.
-                // This avoids visually dense regions grouping items that are actually
-                // far apart in the genome, and vice versa.
-                const minGapMb = 3; // Adjust this value (in megabases) to change the threshold
-                const minGapBp = minGapMb * 1_000_000;
-
-                const clusters = [];
-                items.forEach(item => {
-                    const last = clusters[clusters.length - 1];
-                    if (last) {
-                        const lastMember = last.members[last.members.length - 1];
-                        const gapBp = item.a.start - lastMember.a.stop;
-                        if (gapBp < minGapBp) {
-                            last.members.push(item);
-                            last.spanTop = Math.min(last.spanTop, item.y);
-                            last.spanBottom = Math.max(last.spanBottom, item.y + item.h);
-                            return;
-                        }
-                    }
-                    clusters.push({
-                        members: [item],
-                        spanTop: item.y,
-                        spanBottom: item.y + item.h
-                    });
-                });
-
-                // Final position of each label = average of the centers of its members.
-                clusters.forEach(c => {
-                    c.labelY = c.members.reduce((s, m) => s + m.centerY, 0) / c.members.length;
-                });
-
-                // Safety pass, in pixels only: if two labels from DIFFERENT clusters
-                // (already decided by Mb) still end up visually too close, separate them a bit.
-                // This does not change what gets grouped, only the final drawing.
-                const minLabelPixelGap = 16;
-                for (let i = 1; i < clusters.length; i++) {
-                    if (clusters[i].labelY - clusters[i - 1].labelY < minLabelPixelGap) {
-                        clusters[i].labelY = clusters[i - 1].labelY + minLabelPixelGap;
-                    }
-                }
-
-                // If labels still need more vertical space than the backbone,
-                // enlarge the SVG canvas (the container already scrolls) without distorting
-                // the genomic scale of the rectangles.
-                const neededHeight = clusters.length ? clusters[clusters.length - 1].labelY + 40 : height;
-                const svgHeight = Math.max(height, neededHeight);
-                if (svgHeight > height) {
-                    svg.setAttribute('height', svgHeight.toString());
-                    svg.setAttribute('viewBox', `0 0 ${width} ${svgHeight}`);
-                }
-
-                const labelBaseX = backboneX + backboneWidth + 12;
-
-                clusters.forEach(cluster => {
-                    const count = cluster.members.length;
-                    const first = cluster.members[0].a;
-
-                    // Connector line from the midpoint of the cluster's genomic span to the label
-                    const midSpanY = (cluster.spanTop + cluster.spanBottom) / 2;
-                    const line = document.createElementNS(svgNS, 'line');
-                    line.setAttribute('x1', (backboneX + backboneWidth).toString());
-                    line.setAttribute('y1', midSpanY.toString());
-                    line.setAttribute('x2', (labelBaseX - 6).toString());
-                    line.setAttribute('y2', cluster.labelY.toString());
-                    line.setAttribute('stroke', '#0f172a');
-                    line.setAttribute('stroke-width', '1');
-                    line.setAttribute('marker-end', 'url(#arrow)');
-                    svg.appendChild(line);
-
-                    // Label text: simple name if it is a single CCAN,
-                    // or "CCAN X +N more" if it represents a cluster
-                    const label = document.createElementNS(svgNS, 'text');
-                    label.setAttribute('x', labelBaseX.toString());
-                    label.setAttribute('y', cluster.labelY.toString());
-                    label.setAttribute('text-anchor', 'start');
-                    label.setAttribute('font-size', '12');
-                    label.setAttribute('font-weight', count > 1 ? '600' : '400');
-                    label.setAttribute('fill', count > 1 ? '#9f1239' : '#0f172a');
-                    label.style.cursor = 'pointer';
-                    label.textContent = count > 1 ? `${first.name} +${count - 1} more` : first.name;
-
-                    const highlightMembers = (on) => {
-                        cluster.members.forEach(m => m.rect.setAttribute('fill', on ? '#fb7185' : (m.a.color || '#e11d48')));
-                        line.setAttribute('stroke', on ? '#b91c1c' : '#0f172a');
-                    };
-                    label.addEventListener('mouseenter', () => highlightMembers(true));
-                    label.addEventListener('mouseleave', () => highlightMembers(false));
-
-                    if (count === 1) {
-                        // Single CCAN: click opens its PDF directly, as before
-                        label.addEventListener('click', (e) => {
-                            e.stopPropagation();
-                            closePopover();
-                            updatePdfViewer(first);
-                        });
-                    } else {
-                        // Multiple grouped CCANs: click toggles a dropdown list
-                        label.addEventListener('click', (e) => {
-                            e.stopPropagation();
-                            const clusterKey = String(cluster.labelY);
-                            if (openPopover && openPopover.dataset.cluster === clusterKey) {
-                                closePopover();
-                                return;
-                            }
-                            closePopover();
-
-                            const popW = 190;
-                            const rowH = 22;
-                            const popH = Math.min(count, 8) * rowH + 12;
-                            const popX = labelBaseX + 14;
-                            let popY = cluster.labelY - popH / 2;
-                            if (popY < 4) popY = 4;
-                            if (popY + popH > svgHeight - 4) popY = svgHeight - 4 - popH;
-
-                            const fo = document.createElementNS(svgNS, 'foreignObject');
-                            fo.setAttribute('x', popX.toString());
-                            fo.setAttribute('y', popY.toString());
-                            fo.setAttribute('width', popW.toString());
-                            fo.setAttribute('height', popH.toString());
-                            fo.dataset.cluster = clusterKey;
-
-                            const wrapper = document.createElement('div');
-                            wrapper.setAttribute('xmlns', 'http://www.w3.org/1999/xhtml');
-                            wrapper.className = 'bg-white border border-slate-300 rounded-md shadow-lg text-xs overflow-y-auto';
-                            wrapper.style.width = popW + 'px';
-                            wrapper.style.height = popH + 'px';
-
-                            cluster.members.forEach(m => {
-                                const row = document.createElement('button');
-                                row.type = 'button';
-                                row.className = 'block w-full text-left px-2 py-1 hover:bg-rose-50 border-b border-slate-100 text-slate-700';
-                                row.textContent = `${m.a.name} \u00b7 ${formatBp(m.a.start)}-${formatBp(m.a.stop)}`;
-                                row.addEventListener('click', (ev) => {
-                                    ev.stopPropagation();
-                                    closePopover();
-                                    updatePdfViewer(m.a);
-                                });
-                                wrapper.appendChild(row);
-                            });
-
-                            fo.appendChild(wrapper);
-                            svg.appendChild(fo);
-                            openPopover = fo;
-                        });
-                    }
-
-                    svg.appendChild(label);
-                });
-
-                container.appendChild(svg);
-                return;
-            }
-
-            // By default, use Ideogram for the full multi-chromosome view
-            const config = {
-                organism: 'human',
-                container: '#ideo-container',
-                dataDir: 'https://cdn.jsdelivr.net/npm/ideogram@1.41.0/dist/data/bands/native/',
-                // Force vertical orientation for a consistent appearance
-                orientation: 'vertical',
-                chrHeight: 420,
-                chrWidth: 20,
-                // Increase the margin to give chromosomes more spacing
-                chrMargin: 80,
-                showBandLabels: false,
-                showFullyBanded: false,
-                annotationsLayout: 'overlay',
-                showAnnotTooltip: false,
-                annotations: annotationsToUse,
-                onClickAnnot: function(annot) {
-                    // Debug: inspect the object returned by Ideogram on click
-                    console.log('Ideogram onClickAnnot:', annot);
-                    updatePdfViewer(annot);
-                },
-            };
-
-            ideogram = new Ideogram(config);
-            // Bind clicks on chromosome labels to redirect to the filter
-            setTimeout(attachChromosomeClickRedirect, 300);
-        }
-
-        function populateChromosomeFilter(annotations) {
-            const select = document.getElementById('chr-filter');
-            // Extract unique chromosomes that have CCANs
-            const uniqueChrs = [...new Set(annotations.map(a => a.chr))].sort((a, b) => {
-                // Sort numerically (1, 2... X, Y)
-                if(!isNaN(a) && !isNaN(b)) return parseInt(a) - parseInt(b);
-                return a.localeCompare(b);
-            });
-
-            uniqueChrs.forEach(chr => {
-                const option = document.createElement('option');
-                option.value = chr;
-                option.text = `Chromosome ${chr}`;
-                select.appendChild(option);
-            });
-        }
-        
-        // Add listeners to chromosome labels so they redirect to the filter
-        function attachChromosomeClickRedirect() {
-            const container = document.getElementById('ideo-container');
-            if (!container) return;
-
-            const attempt = () => {
-                // First, detect explicit elements with the 'chromosome-set' class
-                const sets = Array.from(container.querySelectorAll('.chromosome-set'));
-                if (sets.length) {
-                    sets.forEach(el => {
-                        el.style.cursor = 'pointer';
-                        el.addEventListener('click', () => {
-                            const txt = (el.textContent || '').trim();
-                            const m = txt.match(/([0-9]+|X|Y)/);
-                            if (m) {
-                                const select = document.getElementById('chr-filter');
-                                select.value = m[1];
-                                select.dispatchEvent(new Event('change'));
-                            }
-                        });
-                    });
-                    return;
-                }
-                // Look for text elements that contain only the chromosome number
-                const textNodes = Array.from(container.querySelectorAll('text, tspan'));
-                const candidates = textNodes.filter(el => {
-                    const txt = (el.textContent || '').trim();
-                    return /^([0-9]+|X|Y)$/.test(txt);
-                });
-
-                if (candidates.length === 0) {
-                    // Retry a couple of times if the content has not rendered yet
-                    setTimeout(attempt, 250);
-                    return;
-                }
-
-                candidates.forEach(el => {
-                    const chr = (el.textContent || '').trim();
-                    el.style.cursor = 'pointer';
-                    el.addEventListener('click', (e) => {
-                        const select = document.getElementById('chr-filter');
-                        if (!select) return;
-                        select.value = chr;
-                        select.dispatchEvent(new Event('change'));
-                    });
-                });
-            };
-
-            attempt();
-        }
-
-        // Start the app immediately; the script lives at the end of the body.
-        initApp();
-
-    </script>
+        <div style="font-size:11.5px;color:var(--sub);font-family:ui-monospace,Menlo,monospace;margin-top:3px">${esc(d.chromosome)}:${fmt(d.start)}–${fmt(d.end)}</div>
+      </div>
+      <button class="xbtn" data-action="close">✕</button>
+    </div>
+    <div class="tabs">
+      <button data-action="tab-plot" class="${S.tab==='plot'?'on':''}">Track plot</button>
+      <button data-action="tab-great" class="${S.tab==='great'?'on':''}">GREAT enrichment</button>
+      <button data-action="tab-genes" class="${S.tab==='genes'?'on':''}">Genes</button>
+    </div>
+    ${body}
+    <div class="kv">
+      <div><div class="k">CCAN ID</div><div class="v">${d.ccan}</div></div>
+      <div><div class="k">Chromosome</div><div class="v">${esc(d.chromosome)}</div></div>
+      <div><div class="k">Peaks</div><div class="v">${fmt(d.n_peaks)}</div></div>
+      <div><div class="k">Start (bp)</div><div class="vm">${fmt(d.start)}</div></div>
+      <div><div class="k">End (bp)</div><div class="vm">${fmt(d.end)}</div></div>
+      <div><div class="k">Size</div><div class="vm">${fmtSize(d.size_kb)}</div></div>
+    </div>`;
+  card.style.display='block';
+}
+$('card').addEventListener('click',e=>{
+  e.stopPropagation();
+  const a=e.target.closest('[data-action]');if(!a)return;
+  const act=a.dataset.action;
+  if(act==='close'){S.sel=null;update();}
+  else if(act==='tab-plot'){S.tab='plot';renderCard();}
+  else if(act==='tab-great'){S.tab='great';renderCard();}
+  else if(act==='tab-genes'){S.tab='genes';renderCard();}
+  else if(act==='rank-p'){S.rank='p';renderCard();}
+  else if(act==='rank-fe'){S.rank='fe';renderCard();}
+  else if(act==='go-toggle'){S.goExpanded=!S.goExpanded;renderCard();}
+});
+// ---------- search ----------
+$('q').addEventListener('input',()=>{
+  const q=$('q').value.trim().toLowerCase();
+  const dd=$('dd');
+  if(!q||!S.data){dd.style.display='none';return;}
+  let res=[];
+  if(/^\d+$/.test(q)){
+    res=S.data.filter(d=>String(d.ccan).startsWith(q)).slice(0,8).map(d=>({label:'CCAN '+d.ccan,sub:`${d.chromosome}:${fmt(d.start)}–${fmt(d.end)}`,go:()=>select(d)}));
+  }else{
+    res=L.clusters.filter(c=>c.chr.includes(q)).slice(0,4).map(c=>({label:c.chr,sub:c.count+' CCANs',go:()=>{S.view='genome';S.focusChr=c.chr;S.focusCluster=null;S.sel=null;$('q').value='';syncSeg();update();}}));
+    if(geneIdx&&q.length>=2){
+      const gm=geneIdx.filter(t=>t.sym.toLowerCase().startsWith(q)).sort((a,b)=>a.sym.localeCompare(b.sym)).slice(0,4);
+      for(const t of gm)for(const cc of t.ccans.slice(0,3)){const d=byCcan.get(cc);if(d)res.push({label:t.sym+' · CCAN '+cc,sub:`${d.chromosome}:${fmt(d.start)}–${fmt(d.end)}`,go:()=>select(d)});}
+    }
+    if(goIdx&&q.length>=3&&res.length<8){
+      const hits=goIdx.filter(t=>t.desc.toLowerCase().includes(q)).sort((a,b)=>b.ccans.size-a.ccans.size).slice(0,8-res.length);
+      res=res.concat(hits.map(t=>({label:t.desc,sub:t.ccans.size+' CCANs',go:()=>{S.goFilter={term:t.desc,set:t.ccans};$('q').value='';$('dd').style.display='none';update();}})));
+    }
+  }
+  if(!res.length){dd.style.display='none';return;}
+  dd.innerHTML='';
+  res.forEach(r=>{const b=document.createElement('button');b.innerHTML=`<b>${esc(r.label)}</b><span class="sub">${esc(r.sub)}</span>`;b.addEventListener('click',e=>{e.stopPropagation();r.go();});dd.appendChild(b);});
+  dd.style.display='block';
+});
+document.addEventListener('click',e=>{if(!e.target.closest('.searchwrap'))$('dd').style.display='none';});
+// ---------- header controls ----------
+function syncSeg(){
+  $('viewseg').querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.v===S.view));
+  $('colorseg').querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.c===S.colorBy));
+  $('colorwrap').style.display=S.view==='genome'?'flex':'none';
+  $('gobtn').classList.toggle('on',S.hasGoOnly);
+  const gf=S.goFilter;
+  $('gochip').style.display=gf?'flex':'none';
+  if(gf){$('gochipT').textContent='GO: '+gf.term;$('gochipN').textContent=gf.set.size;}
+}
+$('viewseg').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;S.view=b.dataset.v;S.sel=null;S.focusChr=null;S.focusCluster=null;S.hoverRow=null;hideTip();update();});
+$('colorseg').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;S.colorBy=b.dataset.c;update();});
+$('gobtn').addEventListener('click',()=>{S.hasGoOnly=!S.hasGoOnly;update();});
+$('gochipX').addEventListener('click',()=>{S.goFilter=null;update();});
+$('sidebtn').addEventListener('click',()=>{$('app').classList.toggle('closed');[80,160,240,320,420].forEach(t=>setTimeout(()=>renderOverlay(),t));});
+$('darkbtn').addEventListener('click',()=>{S.dark=!S.dark;document.body.classList.toggle('dark',S.dark);$('darkbtn').textContent=S.dark?'☀':'☾';try{localStorage.setItem('jaguarDark',S.dark?'1':'0');}catch(e){}});
+$('backbtn').addEventListener('click',e=>{e.stopPropagation();S.focusChr=null;S.focusCluster=null;S.sel=null;update();});
+$('main').addEventListener('click',()=>{if(S.sel)S.sel=null;else{S.focusChr=null;S.focusCluster=null;}update();});
+$('mini').addEventListener('click',e=>e.stopPropagation());
+window.addEventListener('resize',()=>{if(L)renderOverlay();});
+// ---------- master update ----------
+function update(){if(!S.data)return;syncSeg();renderSide();updatePoints();renderOverlay();renderChip();renderMini();renderCard();}
+</script>
 </body>
 </html>
